@@ -1,0 +1,462 @@
+/* UNIVERSE — Cantina Design System reskin
+ * Dark-first. Teal accent. DM Sans + DM Mono.
+ *
+ * NOTE: legacy variable names (--krypton, --obsidian, etc.) are kept
+ * so the JSX continues to work; values are remapped to Cantina tokens.
+ */
+
+:root {
+  /* ── Cantina canonical tokens ── */
+  --bg-base:       #0A0A0A;
+  --bg-subtle:     #141414;
+  --bg-elevated:   #1A1A1A;
+  --bg-hover:      #222222;
+  --bg-modal:      #1F1F1F;
+
+  --border-subtle: #1F1F1F;
+  --border-default:#2A2A2A;
+  --border-strong: #333333;
+
+  --txt-primary:   #FAFAFA;
+  --txt-secondary: #B5B5B5;
+  --txt-tertiary:  #808080;
+  --txt-quaternary:#5A5A5A;
+
+  --teal:          #00D4AA;
+  --teal-deep:     #00A887;
+  --teal-soft:     rgba(0, 212, 170, 0.12);
+  --teal-glow:     rgba(0, 212, 170, 0.28);
+  --teal-faint:    rgba(0, 212, 170, 0.06);
+
+  --blue:          #3B82F6;
+  --purple:        #6366F1;
+
+  --error:         #EF4444;
+  --error-soft:    rgba(239, 68, 68, 0.14);
+  --error-faint:   rgba(239, 68, 68, 0.3);
+
+  --warning:       #F59E0B;
+  --warning-faint: rgba(245, 158, 11, 0.3);
+
+  --success:       #10B981;
+
+  /* Radii */
+  --r-sm:   6px;
+  --r-md:   8px;
+  --r-lg:   12px;
+  --r-xl:   16px;
+  --r-2xl:  20px;
+
+  /* ── Legacy alias mappings (consumed by existing JSX) ── */
+  --void:          var(--bg-base);
+  --near-black:    var(--bg-base);
+  --obsidian:      var(--bg-subtle);
+  --steel:         var(--bg-elevated);
+  --iron:          var(--border-default);
+  --iron-dim:      var(--border-subtle);
+  --ash:           var(--border-strong);
+
+  --text-primary:  var(--txt-primary);
+  --text-secondary:var(--txt-secondary);
+  --text-dim:      var(--txt-tertiary);
+  --text-ghost:    var(--txt-quaternary);
+
+  --krypton:       var(--teal);
+  --krypton-deep:  var(--teal-deep);
+  --krypton-dim:   rgba(0, 212, 170, 0.4);
+  --krypton-glow:  var(--teal-glow);
+  --krypton-faint: var(--teal-faint);
+
+  --blood:         var(--error);
+  --blood-deep:    #B91C1C;
+  --blood-faint:   var(--error-faint);
+
+  --gold:          var(--warning);
+  --gold-deep:     #B45309;
+  --gold-faint:    var(--warning-faint);
+
+  --severity-high: var(--warning);
+  --severity-low:  var(--success);
+
+  /* Type families — Cantina uses DM Sans + DM Mono only */
+  --font-display:  "DM Sans", system-ui, sans-serif;
+  --font-body:     "DM Sans", system-ui, sans-serif;
+  --font-ui:       "DM Sans", system-ui, sans-serif;
+  --font-mono:     "DM Mono", "Menlo", monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--txt-primary);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  letter-spacing: -0.005em;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+input, textarea {
+  font-family: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  outline: none;
+}
+
+textarea {
+  resize: none;
+}
+
+/* Cantina has flat dark surfaces — no grain overlay */
+.grain { position: relative; }
+
+/* App shell */
+.app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  background: var(--bg-base);
+  position: relative;
+}
+
+.screen {
+  flex: 1;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Screen header */
+.screen-header {
+  padding: 22px 32px 0;
+  flex-shrink: 0;
+}
+.screen-header-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  color: var(--txt-primary);
+  text-transform: none;
+  font-weight: 600;
+}
+.screen-header-rule {
+  height: 1px;
+  background: var(--border-subtle);
+  margin-top: 16px;
+}
+
+/* Eyebrow */
+.label-eyebrow {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--txt-tertiary);
+  font-weight: 600;
+}
+.label-eyebrow.krypton { color: var(--teal); }
+
+.section-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+  margin-left: 14px;
+}
+.section-rule.krypton { background: var(--border-subtle); }
+
+.section-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+/* Pills (Cantina capsules) */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  min-height: 32px;
+  max-width: 320px;
+  border-radius: 999px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--txt-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pill > span.pill-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  max-width: 100%;
+}
+.pill.italic {
+  font-family: var(--font-ui);
+  font-style: normal;
+  font-size: 13px;
+  color: var(--txt-secondary);
+}
+.pill.blood   { border-color: rgba(239, 68, 68, 0.35);  color: #FCA5A5; background: var(--error-soft); }
+.pill.gold    { border-color: rgba(245, 158, 11, 0.35); color: #FCD34D; background: rgba(245,158,11,0.10); }
+.pill.krypton {
+  border-color: rgba(0, 212, 170, 0.45);
+  color: var(--teal);
+  background: var(--teal-soft);
+}
+.pill.iron-fill {
+  background: var(--bg-hover);
+  color: var(--txt-tertiary);
+  border-color: var(--border-default);
+}
+.pill.dashed {
+  border-style: dashed;
+  border-color: var(--border-default);
+  background: transparent;
+  color: var(--txt-tertiary);
+  cursor: pointer;
+}
+.pill.dashed:hover { color: var(--txt-secondary); border-color: var(--border-strong); background: var(--bg-elevated); }
+
+@keyframes leadPulse {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+
+/* Buttons — Cantina primary CTA */
+.btn-cinema {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 20px;
+  height: 44px;
+  width: 100%;
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--teal);
+  color: #003328;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  letter-spacing: -0.005em;
+  text-transform: none;
+  font-weight: 600;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-cinema:hover {
+  background: #1FE0BB;
+  box-shadow: 0 0 24px var(--teal-glow);
+}
+.btn-cinema.primary { height: 48px; font-size: 15px; }
+.btn-cinema.pulse   { animation: pulse 2.4s infinite; }
+
+/* Ghost / outline button (used for secondary CTAs) */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 20px;
+  height: 44px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  background: var(--bg-elevated);
+  color: var(--txt-primary);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 160ms;
+}
+.btn-ghost:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--teal-glow); }
+  50% { box-shadow: 0 0 24px var(--teal-glow); }
+}
+@keyframes timelinePulse {
+  0%   { transform: scale(1);   opacity: 0.9; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+.dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--teal);
+  animation: pulseDot 1.6s infinite;
+}
+.dot.green { background: var(--success); }
+.dot.blood { background: var(--error); }
+
+/* Mono utility */
+.mono { font-family: var(--font-mono); }
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+/* Slider (matrix dimensions) */
+.slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.slider-row .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.slider-dim-label {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  color: var(--txt-secondary);
+  text-transform: none;
+  font-weight: 500;
+}
+.slider-dim-value {
+  font-family: var(--font-ui);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.slider-track {
+  position: relative;
+  height: 6px;
+  background: var(--border-subtle);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.slider-fill {
+  height: 100%;
+  background: var(--teal);
+  border-radius: 999px;
+  position: relative;
+  box-shadow: 0 0 12px var(--teal-glow);
+}
+.slider-thumb {
+  position: absolute;
+  right: -9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--txt-primary);
+  box-shadow: 0 0 0 3px var(--teal), 0 0 12px var(--teal-glow);
+}
+.slider-desc {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-style: normal;
+  color: var(--txt-tertiary);
+  line-height: 1.5;
+}
+
+/* Portrait corner accents */
+.corner-frame {
+  position: relative;
+  border-radius: var(--r-lg);
+}
+.corner-frame::before, .corner-frame::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--teal);
+}
+.corner-frame::before {
+  top: -3px; left: -3px;
+  border-right: none; border-bottom: none;
+  border-top-left-radius: var(--r-lg);
+}
+.corner-frame::after {
+  bottom: -3px; right: -3px;
+  border-left: none; border-top: none;
+  border-bottom-right-radius: var(--r-lg);
+}
+
+.portrait-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Toggle */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--border-default);
+  position: relative;
+  cursor: pointer;
+  transition: background 160ms;
+  flex-shrink: 0;
+}
+.toggle.on {
+  background: var(--teal);
+}
+.toggle .knob {
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--txt-primary);
+  transition: transform 160ms;
+}
+.toggle.on .knob { transform: translateX(16px); background: #fff; }
+
+.fade-in { animation: fadeIn 600ms ease forwards; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.cursor-blink {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  background: var(--teal);
+  vertical-align: text-bottom;
+  margin-left: 2px;
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* Card surface */
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+}
