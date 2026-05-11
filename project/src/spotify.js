@@ -1,6 +1,6 @@
 // spotify.js — Spotify PKCE OAuth + psyche derivation + SpotifyPanel UI
 
-const SPOTIFY_CLIENT_ID = 'YOUR_CLIENT_ID_HERE';
+const SPOTIFY_CLIENT_ID = 'cc8586818bbc4cecba46b5686a81f79a';
 const REDIRECT_URI = window.location.origin + window.location.pathname.replace(/\/$/, '');
 const SCOPES = [
   'playlist-read-private',
