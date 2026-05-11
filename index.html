@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cantina — Story Simulation Engine</title>
+
+  <!-- Resolve all relative URLs (assets/, src/, styles.css) against project/ -->
+  <base href="project/">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- icons must load first — every other component uses Icon -->
+  <script type="text/babel" src="src/icons.jsx"></script>
+
+  <!-- modals.jsx: defines local Modal + ConflictLibraryModal + TimelineEventModal.
+       modal.jsx: defines the richer Modal (primaryLabel / onPrimary / maxHeight) used
+       by reference-modal.jsx; loads second so window.Modal points to it while
+       ConflictLibraryModal / TimelineEventModal keep their closed-over local Modal. -->
+  <script type="text/babel" src="src/modals.jsx"></script>
+  <script type="text/babel" src="src/modal.jsx"></script>
+
+  <!-- portraits must load before any component that renders FigurePortrait -->
+  <script type="text/babel" src="src/portraits.jsx"></script>
+
+  <script type="text/babel" src="src/sidebar.jsx"></script>
+  <script type="text/babel" src="src/character-forge.jsx"></script>
+  <script type="text/babel" src="src/world-architect.jsx"></script>
+  <script type="text/babel" src="src/world-map.jsx"></script>
+  <script type="text/babel" src="src/simulation-room.jsx"></script>
+  <script type="text/babel" src="src/clip-studio.jsx"></script>
+  <script type="text/babel" src="src/reference-modal.jsx"></script>
+  <script type="text/babel" src="src/home.jsx"></script>
+
+  <!-- tweaks-panel must load before tweaks.jsx which consumes useTweaks / TweaksPanel -->
+  <script type="text/babel" src="src/tweaks-panel.jsx"></script>
+  <script type="text/babel" src="src/tweaks.jsx"></script>
+
+  <!-- app.jsx bootstraps ReactDOM — must be last -->
+  <script type="text/babel" src="src/app.jsx"></script>
+</body>
+</html>
