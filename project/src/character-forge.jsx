@@ -10,7 +10,7 @@ const forgeStyles = {
   body: {
     flex: 1,
     display: "grid",
-    gridTemplateColumns: "38% 62%",
+    gridTemplateColumns: "70% 30%",
     gap: 0,
     overflow: "hidden",
     minHeight: 0,
@@ -159,7 +159,7 @@ const valueColor = (v, dim) => {
   return "var(--krypton)";
 };
 
-const MatrixSlider = ({ dim, value, onChange }) => {
+const MatrixSlider = ({ dim, value, onChange, compact = false }) => {
   const trackRef = React.useRef(null);
   const [drag, setDrag] = React.useState(false);
 
@@ -181,8 +181,8 @@ const MatrixSlider = ({ dim, value, onChange }) => {
   return (
     <div className="slider-row">
       <div className="top">
-        <span className="slider-dim-label">{dim.label}</span>
-        <span className="slider-dim-value" style={{ color: valueColor(value, dim.key) }}>{value}%</span>
+        <span className="slider-dim-label" style={compact ? { fontSize: 11 } : {}}>{dim.label}</span>
+        <span className="slider-dim-value" style={{ color: valueColor(value, dim.key), ...(compact ? { fontSize: 18 } : {}) }}>{value}%</span>
       </div>
       <div
         className="slider-track"
@@ -193,7 +193,7 @@ const MatrixSlider = ({ dim, value, onChange }) => {
           <div className="slider-thumb"/>
         </div>
       </div>
-      <div className="slider-desc">{dynamicDesc(dim.key, value)}</div>
+      <div className="slider-desc" style={compact ? { fontSize: 12 } : {}}>{dynamicDesc(dim.key, value)}</div>
     </div>
   );
 };
@@ -238,6 +238,22 @@ const CharacterSwitcher = ({ activeId, onSelect }) => (
         </div>
       );
     })}
+    <button
+      onClick={() => { if (window.navigateTo) window.navigateTo('home'); }}
+      title="Add new character"
+      style={{
+        width: 56, height: 56, borderRadius: "50%",
+        background: "transparent",
+        border: "1.5px dashed var(--teal)",
+        cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0,
+        color: "var(--teal)", fontSize: 22, fontWeight: 300,
+        transition: "all 0.15s ease",
+      }}
+      onMouseEnter={e => e.currentTarget.style.background = "rgba(0,212,170,0.08)"}
+      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+    >+</button>
   </div>
 );
 
@@ -349,6 +365,26 @@ const CharacterForge = () => {
     "Hamlet's paralysis between action and doubt",
   ]);
 
+  // Spotify OCEAN → matrix mapping
+  const handleOceanDerived = (ocean) => {
+    setMatrix(prev => ({
+      ...prev,
+      empathy:      ocean.A,
+      volatility:   ocean.N,
+      ambition:     ocean.E,
+      shadow:       Math.round((100 - ocean.C + ocean.N) / 2),
+      moralRigidity: ocean.C,
+      sacrifice:    ocean.A,
+      psychopathy:  Math.round(100 - ocean.A),
+      loyalty:      Math.round((ocean.A + ocean.C) / 2),
+    }));
+  };
+
+  const handleTraitsAdded = (traits) => {
+    const newRefs = traits.map(t => `Music-derived: ${t.label}`);
+    setRefs(prev => [...prev, ...newRefs.filter(r => !prev.includes(r))]);
+  };
+
   return (
     <div style={forgeStyles.root}>
       <div className="screen-header">
@@ -373,6 +409,13 @@ const CharacterForge = () => {
               </div>
             </div>
           </div>
+
+          {window.SpotifyPanel && (
+            <SpotifyPanel
+              onOceanDerived={handleOceanDerived}
+              onTraitsAdded={handleTraitsAdded}
+            />
+          )}
 
           <div>
             <div className="section-head">
@@ -425,7 +468,7 @@ const CharacterForge = () => {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
               {DIMENSIONS.map(d => (
-                <MatrixSlider key={d.key} dim={d} value={matrix[d.key]} onChange={(v) => setVal(d.key, v)}/>
+                <MatrixSlider key={d.key} dim={d} value={matrix[d.key]} onChange={(v) => setVal(d.key, v)} compact={true}/>
               ))}
             </div>
           </div>
