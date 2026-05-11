@@ -328,7 +328,9 @@ const PersonalityRadar = ({ matrix }) => {
 };
 
 const SpotifySection = ({ onOceanDerived, onTraitsAdded }) => {
-  const [connected, setConnected] = React.useState(() => !!(window.SpotifyAuth && SpotifyAuth.getToken()));
+  const SA = window.SpotifyAuth;
+  const SP = window.SpotifyPsyche;
+  const [connected, setConnected] = React.useState(() => !!(SA && SA.getToken()));
   const [url, setUrl] = React.useState('');
   const [analyzing, setAnalyzing] = React.useState(false);
   const [result, setResult] = React.useState(null);
@@ -337,23 +339,23 @@ const SpotifySection = ({ onOceanDerived, onTraitsAdded }) => {
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('code') && window.SpotifyAuth) {
-      SpotifyAuth.handleCallback().then(token => { if (token) setConnected(true); });
+    if (params.get('code') && SA) {
+      SA.handleCallback().then(token => { if (token) setConnected(true); });
     }
   }, []);
 
   const analyze = async () => {
-    if (!url.trim()) return;
+    if (!url.trim() || !SA || !SP) return;
     setAnalyzing(true); setError(null);
     try {
-      const id = SpotifyPsyche.parsePlaylistId(url);
-      const playlist = await SpotifyAuth.getPlaylist(id);
+      const id = SP.parsePlaylistId(url);
+      const playlist = await SA.getPlaylist(id);
       const tracks = playlist.tracks.items.map(i => i.track).filter(Boolean);
       const artistIds = [...new Set(tracks.flatMap(t => t.artists.map(a => a.id)))];
-      const artists = await SpotifyAuth.getArtistGenres(artistIds);
-      const ocean = SpotifyPsyche.deriveOCEAN(playlist, artists);
+      const artists = await SA.getArtistGenres(artistIds);
+      const ocean = SP.deriveOCEAN(playlist, artists);
       const genres = artists.flatMap(a => a.genres || []);
-      const traits = SpotifyPsyche.deriveTraits(genres);
+      const traits = SP.deriveTraits(genres);
       const genreCount = {};
       genres.forEach(g => { genreCount[g] = (genreCount[g] || 0) + 1; });
       const topGenres = Object.entries(genreCount).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([g]) => g);
@@ -394,7 +396,7 @@ const SpotifySection = ({ onOceanDerived, onTraitsAdded }) => {
               Connect Spotify and paste any playlist URL to derive this character's psyche from music
             </span>
             <button
-              onClick={() => SpotifyAuth.login()}
+              onClick={() => SA && SA.login()}
               style={{ flexShrink: 0, background: "#1DB954", border: "none", borderRadius: 24, padding: "9px 18px", color: "#000", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 7, whiteSpace: "nowrap" }}
             >
               {spotifyIcon(13, "#000")} Connect Spotify
@@ -472,7 +474,7 @@ const SpotifySection = ({ onOceanDerived, onTraitsAdded }) => {
                   </div>
                 )}
                 <button
-                  onClick={() => { SpotifyAuth.logout(); setConnected(false); setResult(null); setUrl(''); }}
+                  onClick={() => { SA && SA.logout(); setConnected(false); setResult(null); setUrl(''); }}
                   style={{ background: "none", border: "none", color: "var(--text-ghost)", fontSize: 11, cursor: "pointer", fontFamily: "var(--font-mono)" }}
                 >Disconnect Spotify</button>
               </div>
@@ -552,6 +554,11 @@ const CharacterForge = () => {
       <div style={forgeStyles.body}>
         {/* LEFT — IDENTITY */}
         <div style={forgeStyles.leftCol}>
+          <SpotifySection
+            onOceanDerived={handleOceanDerived}
+            onTraitsAdded={handleTraitsAdded}
+          />
+
           <div style={forgeStyles.identityRow}>
             <div className="corner-frame" style={forgeStyles.portraitWrap} key={active.id}>
               <FigurePortrait id={active.id}/>
@@ -566,11 +573,6 @@ const CharacterForge = () => {
               </div>
             </div>
           </div>
-
-          <SpotifySection
-            onOceanDerived={handleOceanDerived}
-            onTraitsAdded={handleTraitsAdded}
-          />
 
           <div>
             <div className="section-head">
