@@ -1,380 +1,711 @@
-// HOME — Discovery feed
-// BookTok + Moviecore. Stories, scenes, quotes, moments, characters.
+// home.jsx — Director-framing discovery screen
+// OCEAN psyche system + character/universe browser
 
-const homeStyles = {
-  root: {
-    flex: 1, height: "100vh", overflowY: "auto",
-    background: "var(--near-black)",
+const OCEAN_DIMS = [
+  { key: 'O', color: '#00D4FF', label: 'Openness' },
+  { key: 'C', color: '#C9A84C', label: 'Conscientiousness' },
+  { key: 'E', color: '#FF8C4B', label: 'Extraversion' },
+  { key: 'A', color: '#2DFF78', label: 'Agreeableness' },
+  { key: 'N', color: '#CC2200', label: 'Neuroticism' },
+];
+
+const HOME_CHARACTERS = [
+  {
+    id: 'lex',
+    name: 'Lex Luthor',
+    role: 'Billionaire Architect',
+    universe: 'DC Metropolis',
+    archetype: 'Strategist',
+    ocean: { O: 88, C: 95, E: 72, A: 14, N: 45 },
+    tags: ['Villain', 'Intellectual', 'DC'],
+    bio: "Humanity's greatest mind, convinced Superman is its greatest threat.",
   },
-  topBar: {
-    display: "flex", alignItems: "center", justifyContent: "space-between",
-    padding: "26px 40px 22px", gap: 24,
-    position: "sticky", top: 0, zIndex: 5,
-    background: "linear-gradient(var(--near-black) 70%, transparent)",
+  {
+    id: 'diana',
+    name: 'Diana Prince',
+    role: 'Warrior Ambassador',
+    universe: 'DC Themyscira',
+    archetype: 'Hero',
+    ocean: { O: 76, C: 82, E: 68, A: 91, N: 22 },
+    tags: ['Hero', 'Warrior', 'DC'],
+    bio: 'Princess of the Amazons, bridging two worlds with shield and compassion.',
   },
-  hello: { fontFamily: "var(--font-ui)", fontSize: 12, color: "var(--text-dim)", letterSpacing: "0.18em", textTransform: "uppercase" },
-  user: { fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 22, color: "var(--text-primary)", letterSpacing: "-0.02em", marginTop: 2 },
-  search: {
-    flex: 1, maxWidth: 460, height: 44,
-    background: "var(--obsidian)", border: "1px solid var(--iron)", borderRadius: 999,
-    paddingLeft: 44, paddingRight: 18,
-    fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--text-primary)",
-    outline: "none",
+  {
+    id: 'joker',
+    name: 'The Joker',
+    role: 'Agent of Chaos',
+    universe: 'DC Gotham',
+    archetype: 'Wildcard',
+    ocean: { O: 94, C: 8, E: 97, A: 4, N: 98 },
+    tags: ['Villain', 'Chaotic', 'DC'],
+    bio: 'No origin. No motive. Just the eternal punchline.',
   },
-  bell: {
-    width: 44, height: 44, borderRadius: 999,
-    background: "var(--obsidian)", border: "1px solid var(--iron)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    color: "var(--text-secondary)", cursor: "pointer", flexShrink: 0,
+  {
+    id: 'bruce',
+    name: 'Bruce Wayne',
+    role: 'Dark Knight',
+    universe: 'DC Gotham',
+    archetype: 'Vigilante',
+    ocean: { O: 70, C: 97, E: 31, A: 52, N: 64 },
+    tags: ['Hero', 'Detective', 'DC'],
+    bio: 'Vengeance forged from grief, wielded with surgical precision.',
   },
-  hero: {
-    margin: "0 40px 36px", padding: "32px 36px",
-    background: "linear-gradient(135deg, rgba(0,212,170,0.08), rgba(59,130,246,0.06) 50%, rgba(245,158,11,0.04))",
-    border: "1px solid var(--iron)", borderRadius: 18,
-    display: "grid", gridTemplateColumns: "1fr auto", gap: 28, alignItems: "center",
+  {
+    id: 'harley',
+    name: 'Harley Quinn',
+    role: 'Renegade Psychologist',
+    universe: 'DC Gotham',
+    archetype: 'Wildcard',
+    ocean: { O: 88, C: 22, E: 96, A: 48, N: 82 },
+    tags: ['Antihero', 'Chaotic', 'DC'],
+    bio: 'Former doctor of the mind, now its most colorful patient.',
   },
-  sectionWrap: { padding: "0 40px 32px" },
-  sectionHead: {
-    display: "flex", alignItems: "baseline", justifyContent: "space-between",
-    marginBottom: 16,
+  {
+    id: 'clark',
+    name: 'Clark Kent',
+    role: 'Last Son of Krypton',
+    universe: 'DC Metropolis',
+    archetype: 'Hero',
+    ocean: { O: 62, C: 88, E: 74, A: 96, N: 18 },
+    tags: ['Hero', 'Alien', 'DC'],
+    bio: 'Infinite power tempered by small-town Kansas values.',
   },
-  sectionTitle: {
-    fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 22,
-    color: "var(--text-primary)", letterSpacing: "-0.02em",
+  {
+    id: 'selina',
+    name: 'Selina Kyle',
+    role: 'Midnight Thief',
+    universe: 'DC Gotham',
+    archetype: 'Antihero',
+    ocean: { O: 78, C: 55, E: 82, A: 44, N: 38 },
+    tags: ['Antihero', 'Rogue', 'DC'],
+    bio: 'Morality is flexible when survival demands it.',
   },
-  sectionSub: {
-    fontFamily: "var(--font-ui)", fontSize: 12, color: "var(--text-dim)",
-    letterSpacing: "0.04em", marginTop: 2,
+  {
+    id: 'barry',
+    name: 'Barry Allen',
+    role: 'Scarlet Speedster',
+    universe: 'DC Central City',
+    archetype: 'Hero',
+    ocean: { O: 72, C: 76, E: 88, A: 90, N: 42 },
+    tags: ['Hero', 'Speedster', 'DC'],
+    bio: 'The fastest man alive, still running from the night his mother died.',
   },
-  seeAll: {
-    fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--krypton)",
-    letterSpacing: "0.18em", textTransform: "uppercase", cursor: "pointer",
+  {
+    id: 'arthur',
+    name: 'Arthur Curry',
+    role: 'King of Atlantis',
+    universe: 'DC Atlantis',
+    archetype: 'Hero',
+    ocean: { O: 64, C: 68, E: 77, A: 72, N: 48 },
+    tags: ['Hero', 'Royalty', 'DC'],
+    bio: 'Torn between two worlds, sovereign of the deep.',
   },
-  rail: {
-    display: "grid", gridAutoFlow: "column", gridAutoColumns: "minmax(280px, 1fr)",
-    gap: 14, overflowX: "auto", paddingBottom: 6,
-    scrollbarWidth: "thin",
+  {
+    id: 'victor',
+    name: 'Victor Stone',
+    role: 'Man-Machine',
+    universe: 'DC Metropolis',
+    archetype: 'Hero',
+    ocean: { O: 80, C: 84, E: 54, A: 68, N: 66 },
+    tags: ['Hero', 'Cyborg', 'DC'],
+    bio: 'Rebuilt from tragedy, forever reconciling humanity with hardware.',
   },
+];
+
+const HOME_UNIVERSES = [
+  {
+    id: 'gotham',
+    name: 'Gotham City',
+    tagline: 'Where darkness is the only law',
+    genre: 'Noir / Crime',
+    characters: 4,
+    gradient: 'linear-gradient(135deg, #1a0a2e 0%, #0d1117 50%, #1a1208 100%)',
+    accentColor: '#A78BFA',
+  },
+  {
+    id: 'metropolis',
+    name: 'Metropolis',
+    tagline: 'The city that believes in tomorrow',
+    genre: 'Sci-Fi / Hope',
+    characters: 3,
+    gradient: 'linear-gradient(135deg, #001a2e 0%, #002244 50%, #003366 100%)',
+    accentColor: '#00D4FF',
+  },
+  {
+    id: 'themyscira',
+    name: 'Themyscira',
+    tagline: 'Paradise forged in eternal war',
+    genre: 'Mythology / Action',
+    characters: 1,
+    gradient: 'linear-gradient(135deg, #1a0a00 0%, #2d1a00 50%, #1a0800 100%)',
+    accentColor: '#F59E0B',
+  },
+  {
+    id: 'atlantis',
+    name: 'Atlantis',
+    tagline: 'An empire the surface world forgot',
+    genre: 'Fantasy / Political',
+    characters: 1,
+    gradient: 'linear-gradient(135deg, #001a1a 0%, #003333 50%, #004444 100%)',
+    accentColor: '#00D4AA',
+  },
+  {
+    id: 'central-city',
+    name: 'Central City',
+    tagline: 'Time is just another obstacle',
+    genre: 'Sci-Fi / Adventure',
+    characters: 1,
+    gradient: 'linear-gradient(135deg, #1a0500 0%, #2d0d00 50%, #1a0800 100%)',
+    accentColor: '#FF6B35',
+  },
+  {
+    id: 'multiverse',
+    name: 'The Multiverse',
+    tagline: 'Every choice births a new reality',
+    genre: 'Cosmic / Drama',
+    characters: 10,
+    gradient: 'linear-gradient(135deg, #0a0612 0%, #120a22 50%, #1b1034 100%)',
+    accentColor: '#A78BFA',
+  },
+];
+
+const HERO_VISUALS = [
+  {
+    gradient: 'radial-gradient(ellipse at 60% 50%, rgba(0,212,170,0.18) 0%, transparent 70%), radial-gradient(ellipse at 20% 80%, rgba(59,130,246,0.12) 0%, transparent 60%)',
+    label: 'Build Worlds',
+    subtitle: 'From Gotham to the Multiverse',
+  },
+  {
+    gradient: 'radial-gradient(ellipse at 40% 40%, rgba(167,139,250,0.22) 0%, transparent 65%), radial-gradient(ellipse at 70% 70%, rgba(244,114,182,0.10) 0%, transparent 55%)',
+    label: 'Shape Characters',
+    subtitle: 'OCEAN-mapped psychology',
+  },
+  {
+    gradient: 'radial-gradient(ellipse at 50% 30%, rgba(245,158,11,0.18) 0%, transparent 60%), radial-gradient(ellipse at 30% 70%, rgba(204,34,0,0.12) 0%, transparent 55%)',
+    label: 'Run Simulations',
+    subtitle: 'Conflict meets consequence',
+  },
+];
+
+const deriveTraits = (ocean) => {
+  const traits = [];
+  if (ocean.O > 80) traits.push('Visionary');
+  else if (ocean.O < 20) traits.push('Rigid');
+  if (ocean.C > 80) traits.push('Meticulous');
+  else if (ocean.C < 20) traits.push('Impulsive');
+  if (ocean.E > 80) traits.push('Magnetic');
+  else if (ocean.E < 20) traits.push('Reclusive');
+  if (ocean.A > 80) traits.push('Empathic');
+  else if (ocean.A < 20) traits.push('Non-empathic');
+  if (ocean.N > 70) traits.push('Volatile');
+  else if (ocean.N < 20) traits.push('Unshakeable');
+  return traits;
 };
 
-const FOR_YOU = [
-  { id: "frodo", title: "Frodo's Burden", author: "@ringbearer_arc", tag: "every gold ring is a leash", count: "2.7m", grad: "linear-gradient(135deg,#3a4a2a,#16140a)" },
-  { id: "hamlet", title: "Hamlet, Reframed", author: "@bookishghost", tag: "the prince refuses the script", count: "1.5m", grad: "linear-gradient(135deg,#1a2538,#0d0d18)" },
-  { id: "atticus", title: "Dark Academia: Atticus", author: "@scoutfinch", tag: "the courthouse oath is older than the verdict", count: "1.2m", grad: "linear-gradient(135deg,#3d2a1a,#1a1208)" },
-  { id: "beloved", title: "Beloved", author: "@ghostsweetdew", tag: "the past is not a story", count: "1.8m", grad: "linear-gradient(135deg,#2a1a2a,#15081a)" },
-  { id: "anna",   title: "Anna at the Station", author: "@karenina_arc", tag: "the train, then the silence", count: "986k", grad: "linear-gradient(135deg,#1f2638,#0a0d18)" },
-];
+const pentAngle = (i) => -Math.PI / 2 + (i * 2 * Math.PI) / 5;
 
-const SCENES = [
-  { id: "library", title: "The Library Duel", source: "Pride & Prejudice", creator: "@longbourn_lights", tone: "Tense / Witty", color: "linear-gradient(160deg,#3a2818,#15100a)" },
-  { id: "longtable", title: "Dinner at the Long Table", source: "Brideshead Revisited", creator: "@oxford_decay", tone: "Lush / Mournful", color: "linear-gradient(160deg,#5a3a1a,#1a0e08)" },
-  { id: "trainstation", title: "Train Station, Last Goodbye", source: "Anna Karenina", creator: "@stationmaster", tone: "Doomed / Quiet", color: "linear-gradient(160deg,#1a2a3a,#08101a)" },
-  { id: "cliff", title: "Cliffhouse Storm", source: "Rebecca", creator: "@manderley", tone: "Gothic / Threatened", color: "linear-gradient(160deg,#1a1a2a,#080814)" },
-  { id: "garden", title: "The Greenhouse Confession", source: "Atonement", creator: "@summer_1935", tone: "Charged / Unspoken", color: "linear-gradient(160deg,#1a3a2a,#08180e)" },
-  { id: "letter", title: "The Letter Never Opened", source: "Persuasion", creator: "@captain_wentworth", tone: "Ache / Restraint", color: "linear-gradient(160deg,#3a2a3a,#180818)" },
-];
-
-const QUOTES = [
-  { line: "It is a truth universally acknowledged…", source: "Pride & Prejudice", saves: "412k" },
-  { line: "Happy families are all alike; every unhappy family is unhappy in its own way.", source: "Anna Karenina", saves: "298k" },
-  { line: "Whatever our souls are made of, his and mine are the same.", source: "Wuthering Heights", saves: "1.1m" },
-  { line: "Reader, I married him.", source: "Jane Eyre", saves: "562k" },
-  { line: "Call me Ishmael.", source: "Moby-Dick", saves: "204k" },
-  { line: "All this happened, more or less.", source: "Slaughterhouse-Five — paraphrase", saves: "118k" },
-];
-
-const MOMENTS = [
-  { id: "m1", label: "The Proposal That Came Too Late", body: "She has already chosen the harder road. The kindness arrives like weather she has stopped checking for." },
-  { id: "m2", label: "The Letter Never Opened", body: "He keeps it in a drawer for forty years. Once a year he sets it on the table and does not open it." },
-  { id: "m3", label: "The Brother She Chose to Spare", body: "There were two names on the list. She crossed off only one and lived with the rest." },
-  { id: "m4", label: "The Lie Told for Love", body: "It was a small lie at first. By the third winter it had a kitchen in it, and a child." },
-];
-
-const HOME_CHAR_PROFILES = [
-  { name: "Elizabeth Bennet", source: "Pride & Prejudice", arc: "Wit as armor, pride as wound.", real: true,  followers: "1.8m" },
-  { name: "Heathcliff",       source: "Wuthering Heights", arc: "Love so total it becomes ruin.",   real: true,  followers: "2.4m" },
-  { name: "Anna Karenina",    source: "Tolstoy",            arc: "A woman who chooses the train.",   real: true,  followers: "1.1m" },
-  { name: "Vera Solenne",     source: "AI · @duskwriter",   arc: "An aristocrat in a country that no longer exists.", real: false, followers: "84k" },
-  { name: "Caleb Marsh",      source: "AI · @prairieghosts",arc: "A widower who builds his late wife a chapel.",       real: false, followers: "62k" },
-  { name: "Pip",              source: "Great Expectations", arc: "A fortune that costs a friend.",    real: true,  followers: "740k" },
-];
-
-const TRENDING_PLOTS = [
-  { id: "p1", title: "The Lighthouse Keeper's Daughter", genre: "Slow Burn / Coastal Gothic", players: "12.4k" },
-  { id: "p2", title: "Court of Stolen Roses",            genre: "Dark Romantasy / Court Intrigue", players: "44.1k" },
-  { id: "p3", title: "Last Train Out of Yalta",         genre: "Wartime / Forbidden", players: "8.7k" },
-  { id: "p4", title: "The Detective Who Forgets",        genre: "Noir / Memory Loop", players: "21.3k" },
-  { id: "p5", title: "Saint of the Wheat Fields",        genre: "Magical Realism", players: "5.2k" },
-];
-
-const Section = ({ title, sub, children, action = "See all →" }) => (
-  <div style={homeStyles.sectionWrap}>
-    <div style={homeStyles.sectionHead}>
-      <div>
-        <div style={homeStyles.sectionTitle}>{title}</div>
-        {sub && <div style={homeStyles.sectionSub}>{sub}</div>}
-      </div>
-      <span style={homeStyles.seeAll}>{action}</span>
-    </div>
-    {children}
+const OceanDots = ({ ocean, size = 6, gap = 3 }) => (
+  <div style={{ display: 'flex', gap, alignItems: 'center' }}>
+    {OCEAN_DIMS.map(({ key, color }) => (
+      <div key={key} style={{
+        width: size, height: size, borderRadius: '50%',
+        background: color,
+        opacity: (ocean[key] || 0) / 100,
+        boxShadow: `0 0 ${size}px ${color}`,
+        flexShrink: 0,
+      }}/>
+    ))}
   </div>
 );
 
-const ForYouCard = ({ item }) => (
-  <div style={{
-    background: "var(--obsidian)", border: "1px solid var(--iron)", borderRadius: 14,
-    padding: 14, display: "flex", alignItems: "center", gap: 14, cursor: "pointer",
-    transition: "border-color 160ms, transform 160ms",
-  }}
-    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--krypton-dim)"; }}
-    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--iron)"; }}
-  >
-    <div style={{
-      width: 76, height: 76, borderRadius: 10, flexShrink: 0,
-      background: item.grad, border: "1px solid var(--iron)",
-      display: "flex", alignItems: "flex-end", padding: 8,
-      fontFamily: "var(--font-display)", fontSize: 9, color: "rgba(255,255,255,0.7)",
-      letterSpacing: "0.16em", textTransform: "uppercase",
-    }}>{item.id}</div>
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 14, color: "var(--text-primary)" }}>{item.title}</div>
-      <div style={{ fontFamily: "var(--font-ui)", fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>By {item.author}</div>
-      <div style={{ fontFamily: "var(--font-ui)", fontSize: 12, color: "var(--text-secondary)", marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.tag}</div>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-dim)", marginTop: 6, letterSpacing: "0.06em" }}>💬 {item.count}</div>
-    </div>
-  </div>
-);
+const OceanRadar = ({ ocean, size = 120 }) => {
+  const cx = size / 2;
+  const cy = size / 2;
+  const maxR = size * 0.42;
+  const vals = OCEAN_DIMS.map(d => (ocean[d.key] || 0) / 100);
 
-const SceneCard = ({ scene }) => (
-  <div style={{
-    height: 280, borderRadius: 14, position: "relative", overflow: "hidden",
-    border: "1px solid var(--iron)", cursor: "pointer",
-    background: scene.color,
-    display: "flex", flexDirection: "column", justifyContent: "flex-end",
-    padding: 16,
-    transition: "transform 200ms, border-color 200ms",
-  }}
-    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--krypton)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--iron)"; e.currentTarget.style.transform = "translateY(0)"; }}
-  >
-    <div style={{
-      position: "absolute", inset: 0,
-      background: "linear-gradient(180deg, transparent 30%, rgba(0,0,0,0.85) 100%)",
-    }}/>
-    <div style={{
-      position: "absolute", top: 12, right: 12,
-      padding: "5px 10px", borderRadius: 999,
-      background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)",
-      fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-secondary)",
-      letterSpacing: "0.12em", textTransform: "uppercase",
-    }}>{scene.tone}</div>
-    <div style={{ position: "relative", zIndex: 1 }}>
-      <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, color: "#fff", letterSpacing: "-0.01em", lineHeight: 1.2 }}>{scene.title}</div>
-      <div style={{ fontFamily: "var(--font-ui)", fontSize: 12, fontStyle: "italic", color: "rgba(255,255,255,0.7)", marginTop: 4 }}>{scene.source}</div>
-      <button style={{
-        marginTop: 12, height: 32, padding: "0 14px",
-        background: "rgba(0,212,170,0.18)", border: "1px solid var(--krypton)",
-        color: "var(--krypton)", borderRadius: 999, cursor: "pointer",
-        fontFamily: "var(--font-ui)", fontSize: 11, fontWeight: 500, letterSpacing: "0.06em",
-      }}>＋ Step into scene</button>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "rgba(255,255,255,0.5)", marginTop: 10, letterSpacing: "0.1em" }}>By {scene.creator}</div>
-    </div>
-  </div>
-);
+  const gridPolygon = (scale) =>
+    OCEAN_DIMS.map((_, i) => {
+      const a = pentAngle(i);
+      return `${cx + Math.cos(a) * maxR * scale},${cy + Math.sin(a) * maxR * scale}`;
+    }).join(' ');
 
-const QuoteCard = ({ q }) => (
-  <div style={{
-    background: "var(--obsidian)", border: "1px solid var(--iron)", borderRadius: 14,
-    padding: "20px 22px", cursor: "pointer", display: "flex", flexDirection: "column", gap: 12,
-    transition: "border-color 160ms",
-    minHeight: 180,
-  }}
-    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--krypton-dim)"; }}
-    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--iron)"; }}
-  >
-    <div style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 500, color: "var(--text-primary)", lineHeight: 1.4, letterSpacing: "-0.01em", textWrap: "pretty" }}>
-      <span style={{ color: "var(--krypton)", fontSize: 22, marginRight: 4 }}>“</span>
-      {q.line}
-    </div>
-    <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-      <div style={{ fontFamily: "var(--font-ui)", fontSize: 11, color: "var(--text-dim)", letterSpacing: "0.04em" }}>— {q.source}</div>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-ghost)", letterSpacing: "0.08em" }}>♥ {q.saves}</div>
-    </div>
-  </div>
-);
+  const dataPoints = OCEAN_DIMS.map((_, i) => {
+    const a = pentAngle(i);
+    const r = maxR * vals[i];
+    return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+  });
 
-const MomentCard = ({ m }) => (
-  <div style={{
-    background: "linear-gradient(180deg, var(--obsidian), var(--near-black))",
-    border: "1px solid var(--iron)", borderRadius: 14, padding: 18,
-    cursor: "pointer", display: "flex", flexDirection: "column", gap: 8,
-    transition: "border-color 160ms",
-    minHeight: 190,
-  }}
-    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--krypton-dim)"; }}
-    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--iron)"; }}
-  >
-    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--krypton)", letterSpacing: "0.18em", textTransform: "uppercase" }}>Turning point</div>
-    <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--text-primary)", lineHeight: 1.3 }}>{m.label}</div>
-    <div style={{ fontFamily: "var(--font-ui)", fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, flex: 1 }}>{m.body}</div>
-    <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-      <span style={{ fontFamily: "var(--font-ui)", fontSize: 11, color: "var(--krypton)", borderBottom: "1px solid var(--krypton-dim)", paddingBottom: 1 }}>Use as opening</span>
-    </div>
-  </div>
-);
+  const dataPolygon = dataPoints.map(([x, y]) => `${x},${y}`).join(' ');
 
-const CharCard = ({ c }) => (
-  <div style={{
-    background: "var(--obsidian)", border: "1px solid var(--iron)", borderRadius: 14,
-    padding: 14, cursor: "pointer", display: "flex", flexDirection: "column", gap: 10,
-    transition: "border-color 160ms",
-    minHeight: 220,
-  }}
-    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--krypton-dim)"; }}
-    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--iron)"; }}
-  >
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-      <div style={{
-        width: 52, height: 52, borderRadius: "50%",
-        background: c.real ? "linear-gradient(135deg,#3a2a18,#1a0e08)" : "linear-gradient(135deg,#1a2a38,#08101a)",
-        border: "1px solid var(--iron)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 14,
-        color: "rgba(255,255,255,0.85)",
-      }}>{c.name.split(" ").map(w => w[0]).slice(0, 2).join("")}</div>
-      <span style={{
-        fontFamily: "var(--font-mono)", fontSize: 9,
-        color: c.real ? "var(--gold)" : "var(--krypton)",
-        letterSpacing: "0.16em", textTransform: "uppercase",
-        border: `1px solid ${c.real ? "rgba(245,158,11,0.4)" : "var(--krypton-dim)"}`,
-        padding: "3px 8px", borderRadius: 999,
-      }}>{c.real ? "Canon" : "AI"}</span>
-    </div>
-    <div>
-      <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15, color: "var(--text-primary)" }}>{c.name}</div>
-      <div style={{ fontFamily: "var(--font-ui)", fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>{c.source}</div>
-    </div>
-    <div style={{ fontFamily: "var(--font-ui)", fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.45, flex: 1 }}>{c.arc}</div>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-dim)", letterSpacing: "0.06em" }}>♥ {c.followers}</span>
-      <span style={{ fontFamily: "var(--font-ui)", fontSize: 11, color: "var(--krypton)" }}>Open profile →</span>
-    </div>
-  </div>
-);
-
-const PlotCard = ({ p }) => (
-  <div style={{
-    width: 240, flexShrink: 0,
-    background: "var(--obsidian)", border: "1px solid var(--iron)", borderRadius: 14,
-    padding: 14, cursor: "pointer", display: "flex", flexDirection: "column", gap: 10,
-    transition: "border-color 160ms",
-  }}
-    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--krypton-dim)"; }}
-    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--iron)"; }}
-  >
-    <div style={{
-      height: 110, borderRadius: 10,
-      background: "linear-gradient(135deg, rgba(0,212,170,0.18), rgba(59,130,246,0.12), rgba(245,158,11,0.08))",
-      border: "1px solid var(--iron)",
-      display: "flex", alignItems: "flex-end", padding: 10,
-      fontFamily: "var(--font-mono)", fontSize: 9, color: "rgba(255,255,255,0.6)",
-      letterSpacing: "0.18em", textTransform: "uppercase",
-    }}>{p.genre.split("/")[0].trim()}</div>
-    <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 14, color: "var(--text-primary)", lineHeight: 1.25 }}>{p.title}</div>
-    <div style={{ fontFamily: "var(--font-ui)", fontSize: 11, color: "var(--text-dim)" }}>{p.genre}</div>
-    <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--krypton)", letterSpacing: "0.1em", marginTop: "auto" }}>● {p.players} writing now</div>
-  </div>
-);
-
-const Home = () => {
   return (
-    <main style={homeStyles.root} data-screen-label="Home">
-      <div style={homeStyles.topBar}>
-        <div>
-          <div style={homeStyles.hello}>Welcome back</div>
-          <div style={homeStyles.user}>Director Mode · @nightreader</div>
-        </div>
-        <div style={{ position: "relative", flex: 1, maxWidth: 460 }}>
-          <div style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          </div>
-          <input style={homeStyles.search} placeholder="Search scenes, quotes, characters, plots..."/>
-        </div>
-        <div style={homeStyles.bell}><Icon name="alert" size={18}/></div>
-      </div>
-
-      {/* Hero */}
-      <div style={homeStyles.hero}>
-        <div>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--krypton)", letterSpacing: "0.22em", textTransform: "uppercase" }}>This week on cantina</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 30, color: "var(--text-primary)", letterSpacing: "-0.02em", marginTop: 8, lineHeight: 1.15, maxWidth: 640 }}>
-            Step into the books and films you can't stop thinking about.
-          </div>
-          <div style={{ fontFamily: "var(--font-ui)", fontSize: 14, color: "var(--text-secondary)", marginTop: 10, maxWidth: 580, lineHeight: 1.5 }}>
-            Scenes, quotes, turning points, character profiles — both canon and community-built. Pick a moment, become someone, change the ending.
-          </div>
-          <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-            <button className="btn-cinema">Build a story</button>
-            <button style={{
-              height: 44, padding: "0 22px", background: "transparent",
-              border: "1px solid var(--iron)", color: "var(--text-secondary)",
-              borderRadius: 10, cursor: "pointer",
-              fontFamily: "var(--font-ui)", fontSize: 13,
-            }}>Browse plots</button>
-          </div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
-          {["BookTok", "Moviecore", "Slow Burn", "Court Intrigue", "Coastal Gothic"].map((t, i) => (
-            <span key={t} style={{
-              padding: "6px 14px", borderRadius: 999,
-              border: "1px solid var(--iron)", background: "var(--obsidian)",
-              fontFamily: "var(--font-ui)", fontSize: 11, color: "var(--text-secondary)",
-              letterSpacing: "0.04em",
-              opacity: 1 - (i * 0.12),
-            }}>#{t}</span>
-          ))}
-        </div>
-      </div>
-
-      <Section title="For you" sub="Picked from your last reading list and saved scenes">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>
-          {FOR_YOU.map(i => <ForYouCard key={i.id} item={i}/>)}
-        </div>
-      </Section>
-
-      <Section title="Scenes" sub="Real moments from books and films, ready to step into">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
-          {SCENES.map(s => <SceneCard key={s.id} scene={s}/>)}
-        </div>
-      </Section>
-
-      <Section title="Quotes" sub="The lines that lived in your head rent-free">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 12 }}>
-          {QUOTES.map((q, i) => <QuoteCard key={i} q={q}/>)}
-        </div>
-      </Section>
-
-      <Section title="Moments" sub="Turning points to start your story from">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-          {MOMENTS.map(m => <MomentCard key={m.id} m={m}/>)}
-        </div>
-      </Section>
-
-      <Section title="Character profiles" sub="Canon icons and AI-built originals">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
-          {HOME_CHAR_PROFILES.map(c => <CharCard key={c.name} c={c}/>)}
-        </div>
-      </Section>
-
-      <Section title="Trending plots" sub="What the community is writing tonight">
-        <div style={homeStyles.rail}>
-          {TRENDING_PLOTS.map(p => <PlotCard key={p.id} p={p}/>)}
-        </div>
-      </Section>
-
-      <div style={{ height: 60 }}/>
-    </main>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
+      {[0.25, 0.5, 0.75, 1].map(s => (
+        <polygon key={s} points={gridPolygon(s)} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+      ))}
+      {OCEAN_DIMS.map((_, i) => {
+        const a = pentAngle(i);
+        return (
+          <line key={i} x1={cx} y1={cy}
+            x2={cx + Math.cos(a) * maxR} y2={cy + Math.sin(a) * maxR}
+            stroke="rgba(255,255,255,0.06)" strokeWidth="1"
+          />
+        );
+      })}
+      <polygon
+        points={dataPolygon}
+        fill="rgba(0,212,170,0.15)"
+        stroke="rgba(0,212,170,0.7)"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      {dataPoints.map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r={3} fill={OCEAN_DIMS[i].color} opacity={0.9}/>
+      ))}
+      {OCEAN_DIMS.map(({ key, color }, i) => {
+        const a = pentAngle(i);
+        const lx = cx + Math.cos(a) * (maxR + 14);
+        const ly = cy + Math.sin(a) * (maxR + 14);
+        return (
+          <text key={key} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle"
+            fontSize="9" fontFamily="DM Mono, monospace" fontWeight="500" fill={color} opacity={0.85}
+          >{key}</text>
+        );
+      })}
+    </svg>
   );
 };
 
-window.Home = Home;
+const CharacterModal = ({ char, onClose, onNavigate }) => {
+  const traits = deriveTraits(char.ocean);
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.85)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        backdropFilter: 'blur(6px)',
+        padding: 24,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--bg-elevated)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 'var(--r-xl)',
+          maxWidth: 560, width: '100%',
+          padding: 32,
+          boxShadow: '0 32px 80px rgba(0,0,0,0.8)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, marginBottom: 24 }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: 'var(--r-lg)',
+            background: 'linear-gradient(135deg, var(--teal-soft), rgba(255,255,255,0.03))',
+            border: '1px solid rgba(255,255,255,0.08)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 28, flexShrink: 0, color: 'var(--teal)',
+          }}>
+            {char.name[0]}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{char.name}</div>
+            <div style={{ fontSize: 13, color: 'var(--teal)', marginBottom: 4 }}>{char.role}</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'DM Mono, monospace' }}>{char.universe}</div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'rgba(255,255,255,0.4)', fontSize: 18, padding: 4, lineHeight: 1,
+            }}
+          >✕</button>
+        </div>
+
+        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, marginBottom: 24 }}>
+          {char.bio}
+        </p>
+
+        <div style={{ display: 'flex', gap: 24, marginBottom: 24 }}>
+          <OceanRadar ocean={char.ocean} size={140} />
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.35)',
+              letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10,
+            }}>
+              Psyche Profile
+            </div>
+            {OCEAN_DIMS.map(({ key, color }) => (
+              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <div style={{ width: 16, fontSize: 10, fontFamily: 'DM Mono, monospace', color, fontWeight: 600 }}>{key}</div>
+                <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', width: `${char.ocean[key]}%`,
+                    background: color, borderRadius: 2,
+                    boxShadow: `0 0 8px ${color}`,
+                    transition: 'width 0.6s ease',
+                  }}/>
+                </div>
+                <div style={{ width: 28, textAlign: 'right', fontSize: 10, fontFamily: 'DM Mono, monospace', color: 'rgba(255,255,255,0.4)' }}>
+                  {char.ocean[key]}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {traits.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 24 }}>
+            {traits.map(t => (
+              <span key={t} style={{
+                padding: '3px 10px', borderRadius: 999,
+                background: 'rgba(0,212,170,0.1)',
+                border: '1px solid rgba(0,212,170,0.25)',
+                fontSize: 11, color: 'var(--teal)', fontWeight: 500,
+              }}>{t}</span>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 24 }}>
+          {char.tags.map(t => (
+            <span key={t} style={{
+              padding: '2px 8px', borderRadius: 4,
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              fontSize: 10, color: 'rgba(255,255,255,0.45)',
+              fontFamily: 'DM Mono, monospace',
+            }}>{t}</span>
+          ))}
+        </div>
+
+        <button
+          onClick={() => {
+            onClose();
+            if (onNavigate) onNavigate('forge');
+            else if (window.navigateTo) window.navigateTo('forge');
+          }}
+          style={{
+            width: '100%', padding: '12px 0',
+            background: 'var(--teal)', border: 'none',
+            borderRadius: 'var(--r-md)',
+            color: 'var(--accent-ink)', fontSize: 14, fontWeight: 700,
+            cursor: 'pointer', letterSpacing: '0.02em',
+          }}
+        >
+          Open in Character Forge
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const CharacterCard = ({ char, onOpen }) => (
+  <button
+    onClick={() => onOpen(char)}
+    style={{
+      flexShrink: 0, width: 160,
+      background: 'var(--bg-elevated)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 'var(--r-lg)',
+      padding: '14px 12px',
+      cursor: 'pointer', textAlign: 'left',
+      transition: 'border-color 0.2s, transform 0.2s',
+    }}
+    onMouseEnter={e => {
+      e.currentTarget.style.borderColor = 'rgba(0,212,170,0.35)';
+      e.currentTarget.style.transform = 'translateY(-2px)';
+    }}
+    onMouseLeave={e => {
+      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+      e.currentTarget.style.transform = 'translateY(0)';
+    }}
+  >
+    <div style={{
+      width: 44, height: 44, borderRadius: 'var(--r-md)',
+      background: 'linear-gradient(135deg, var(--teal-soft), rgba(255,255,255,0.03))',
+      border: '1px solid rgba(255,255,255,0.08)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 18, marginBottom: 10, color: 'var(--teal)',
+    }}>
+      {char.name[0]}
+    </div>
+    <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', marginBottom: 2, lineHeight: 1.3 }}>
+      {char.name}
+    </div>
+    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 8, fontFamily: 'DM Mono, monospace' }}>
+      {char.archetype}
+    </div>
+    <OceanDots ocean={char.ocean} size={5} gap={2} />
+  </button>
+);
+
+const UniverseCard = ({ universe, onNavigate }) => (
+  <button
+    onClick={() => {
+      if (onNavigate) onNavigate('world');
+      else if (window.navigateTo) window.navigateTo('world');
+    }}
+    style={{
+      flexShrink: 0, width: 220, height: 130,
+      borderRadius: 'var(--r-lg)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      background: universe.gradient,
+      padding: '16px 14px',
+      cursor: 'pointer', textAlign: 'left',
+      position: 'relative', overflow: 'hidden',
+      transition: 'border-color 0.2s, transform 0.2s',
+    }}
+    onMouseEnter={e => {
+      e.currentTarget.style.borderColor = universe.accentColor + '55';
+      e.currentTarget.style.transform = 'translateY(-2px)';
+    }}
+    onMouseLeave={e => {
+      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+      e.currentTarget.style.transform = 'translateY(0)';
+    }}
+  >
+    <div style={{
+      position: 'absolute', top: 0, right: 0,
+      width: 80, height: 80, borderRadius: '50%',
+      background: universe.accentColor, opacity: 0.06,
+      filter: 'blur(24px)', transform: 'translate(20px, -20px)',
+    }}/>
+    <div style={{ position: 'relative' }}>
+      <div style={{
+        fontSize: 9, fontFamily: 'DM Mono, monospace', fontWeight: 500,
+        color: universe.accentColor, marginBottom: 6,
+        letterSpacing: '0.06em', textTransform: 'uppercase',
+      }}>
+        {universe.genre}
+      </div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 4 }}>
+        {universe.name}
+      </div>
+      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', lineHeight: 1.4 }}>
+        {universe.tagline}
+      </div>
+    </div>
+    <div style={{
+      position: 'absolute', bottom: 12, right: 14,
+      fontSize: 10, fontFamily: 'DM Mono, monospace',
+      color: universe.accentColor, opacity: 0.7,
+    }}>
+      {universe.characters} chars
+    </div>
+  </button>
+);
+
+const ScrollSection = ({ title, badge, children, cta, onCta }) => (
+  <div style={{ marginBottom: 40 }}>
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14, paddingLeft: 32 }}>
+      <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '0.02em' }}>
+        {title}
+      </span>
+      {badge && (
+        <span style={{
+          fontSize: 9, fontFamily: 'DM Mono, monospace',
+          color: 'var(--teal)', padding: '1px 6px',
+          border: '1px solid rgba(0,212,170,0.3)',
+          borderRadius: 3, letterSpacing: '0.08em', textTransform: 'uppercase',
+        }}>{badge}</span>
+      )}
+      {cta && (
+        <button
+          onClick={onCta}
+          style={{
+            marginLeft: 'auto', marginRight: 32,
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 11, color: 'rgba(255,255,255,0.35)',
+            fontFamily: 'DM Mono, monospace',
+            transition: 'color 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--teal)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}
+        >
+          {cta} →
+        </button>
+      )}
+    </div>
+    <div style={{
+      display: 'flex', gap: 10,
+      overflowX: 'auto', paddingLeft: 32, paddingRight: 32, paddingBottom: 8,
+      scrollbarWidth: 'none',
+    }}>
+      {children}
+    </div>
+  </div>
+);
+
+const HomeScreen = ({ onNavigate }) => {
+  const [heroIdx, setHeroIdx] = React.useState(0);
+  const [activeChar, setActiveChar] = React.useState(null);
+
+  React.useEffect(() => {
+    const id = setInterval(() => setHeroIdx(i => (i + 1) % HERO_VISUALS.length), 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  React.useEffect(() => {
+    if (onNavigate) window.navigateTo = onNavigate;
+  }, [onNavigate]);
+
+  const handleNavigate = (screen) => {
+    if (onNavigate) onNavigate(screen);
+    else if (window.navigateTo) window.navigateTo(screen);
+  };
+
+  const heroVisual = HERO_VISUALS[heroIdx];
+
+  const forYouChars = React.useMemo(() => {
+    const shuffled = [...HOME_CHARACTERS].sort(() => 0.5 - Math.random());
+    return shuffled.map((c, i) => ({ ...c, isAU: i < 2 }));
+  }, []);
+
+  const villains = HOME_CHARACTERS.filter(c => c.tags.includes('Villain') || c.tags.includes('Antihero'));
+
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'none' }}>
+      {/* Hero Banner */}
+      <div style={{
+        position: 'relative', minHeight: 260,
+        display: 'flex', alignItems: 'stretch',
+        overflow: 'hidden', marginBottom: 40,
+      }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: heroVisual.gradient,
+          transition: 'background 1s ease',
+        }}/>
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to bottom, transparent 60%, var(--bg-base) 100%)',
+        }}/>
+
+        {/* Left 60% */}
+        <div style={{
+          position: 'relative', zIndex: 1,
+          width: '60%', padding: '48px 48px 40px 32px',
+          display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        }}>
+          <div style={{
+            fontSize: 10, fontFamily: 'DM Mono, monospace',
+            letterSpacing: '0.15em', color: 'var(--teal)',
+            textTransform: 'uppercase', marginBottom: 10, fontWeight: 500,
+          }}>
+            Director Mode
+          </div>
+          <h1 style={{ margin: 0, marginBottom: 10, fontSize: 34, fontWeight: 700, lineHeight: 1.15, color: '#fff' }}>
+            {heroVisual.label}
+          </h1>
+          <p style={{ margin: 0, marginBottom: 24, fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
+            {heroVisual.subtitle}
+          </p>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={() => handleNavigate('forge')}
+              style={{
+                padding: '9px 20px', background: 'var(--teal)',
+                border: 'none', borderRadius: 'var(--r-md)',
+                color: 'var(--accent-ink)', fontSize: 13, fontWeight: 700,
+                cursor: 'pointer', letterSpacing: '0.02em',
+              }}
+            >
+              Create Character
+            </button>
+            <button
+              onClick={() => handleNavigate('world')}
+              style={{
+                padding: '9px 20px',
+                background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 'var(--r-md)',
+                color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              Build Universe
+            </button>
+          </div>
+        </div>
+
+        {/* Right 40% */}
+        <div style={{
+          position: 'relative', zIndex: 1,
+          width: '40%',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 16,
+        }}>
+          <div style={{ opacity: 0.7 }}>
+            <OceanRadar ocean={{ O: 72, C: 84, E: 65, A: 78, N: 32 }} size={100} />
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {HERO_VISUALS.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setHeroIdx(i)}
+                style={{
+                  width: heroIdx === i ? 20 : 6, height: 6, borderRadius: 3,
+                  background: heroIdx === i ? 'var(--teal)' : 'rgba(255,255,255,0.2)',
+                  border: 'none', cursor: 'pointer', padding: 0,
+                  transition: 'width 0.3s, background 0.3s',
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Section 1: Featured Characters */}
+      <ScrollSection title="Featured Characters" cta="Open Forge" onCta={() => handleNavigate('forge')}>
+        {HOME_CHARACTERS.map(c => (
+          <CharacterCard key={c.id} char={c} onOpen={setActiveChar} />
+        ))}
+      </ScrollSection>
+
+      {/* Section 2: Universes */}
+      <ScrollSection title="Universes" cta="World Architect" onCta={() => handleNavigate('world')}>
+        {HOME_UNIVERSES.map(u => (
+          <UniverseCard key={u.id} universe={u} onNavigate={handleNavigate} />
+        ))}
+      </ScrollSection>
+
+      {/* Section 3: For You */}
+      <ScrollSection title="For You" badge="Curated">
+        {forYouChars.map(c => (
+          <div key={c.id} style={{ position: 'relative' }}>
+            {c.isAU && (
+              <div style={{
+                position: 'absolute', top: 6, right: 6, zIndex: 1,
+                fontSize: 8, fontFamily: 'DM Mono, monospace',
+                background: 'var(--gold)', color: '#000',
+                padding: '1px 5px', borderRadius: 3,
+                fontWeight: 700, letterSpacing: '0.06em',
+              }}>AU</div>
+            )}
+            <CharacterCard char={c} onOpen={setActiveChar} />
+          </div>
+        ))}
+      </ScrollSection>
+
+      {/* Section 4: Trending Villains */}
+      <ScrollSection title="Trending Villains" badge="Dark" cta="Run Simulation" onCta={() => handleNavigate('sim')}>
+        {villains.map(c => (
+          <CharacterCard key={c.id} char={c} onOpen={setActiveChar} />
+        ))}
+      </ScrollSection>
+
+      {activeChar && (
+        <CharacterModal
+          char={activeChar}
+          onClose={() => setActiveChar(null)}
+          onNavigate={handleNavigate}
+        />
+      )}
+    </div>
+  );
+};
+
+window.Home = HomeScreen;
+window.HomeScreen = HomeScreen;

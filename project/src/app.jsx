@@ -32,7 +32,7 @@ const App = () => {
       }>
         <PortraitGradients/>
         <Sidebar active={screen} onSelect={setScreen}/>
-        {Screen && <Screen/>}
+        {Screen && <Screen onNavigate={setScreen}/>}
       </div>
       <UniverseTweaks tweaks={tweaks} setTweak={setTweak}/>
     </React.Fragment>
