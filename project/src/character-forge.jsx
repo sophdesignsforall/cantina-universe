@@ -410,12 +410,10 @@ const CharacterForge = () => {
             </div>
           </div>
 
-          {window.SpotifyPanel && (
-            <SpotifyPanel
-              onOceanDerived={handleOceanDerived}
-              onTraitsAdded={handleTraitsAdded}
-            />
-          )}
+          <window.SpotifyPanel
+            onOceanDerived={handleOceanDerived}
+            onTraitsAdded={handleTraitsAdded}
+          />
 
           <div>
             <div className="section-head">

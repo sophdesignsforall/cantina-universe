@@ -196,7 +196,7 @@ window.SpotifyPanel = function SpotifyPanel({ onOceanDerived, onTraitsAdded }) {
   const [result, setResult] = React.useState(null);
   const [error, setError] = React.useState(null);
   const [nowPlaying, setNowPlaying] = React.useState(null);
-  const [isExpanded, setIsExpanded] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(true);
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
