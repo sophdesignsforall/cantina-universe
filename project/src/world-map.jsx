@@ -1,64 +1,35 @@
 // WORLD PRESSURE MAP — Cantina Simulated Universes
-// Living heatmap world engine. Director places stamps; characters react.
+// Isometric world engine. Director places stamps and pieces; characters inhabit tiles.
 
-const wpmStyles = {
-  root: {
-    flex: 1, height: "100vh", position: "relative", overflow: "hidden",
-    background: "#04040A", fontFamily: "var(--font-ui)",
-  },
-  leftPanel: (expanded) => ({
-    position: "absolute", top: 0, bottom: 0, left: 0,
-    width: expanded ? 272 : 64,
-    background: "rgba(8,8,16,0.92)", backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)", borderRight: "1px solid var(--iron)",
-    zIndex: 40, transition: "width 220ms cubic-bezier(0.4,0,0.2,1)",
-    display: "flex", flexDirection: "column", overflow: "hidden",
-  }),
-  leftHeader: { padding: "16px 18px 12px", borderBottom: "1px solid var(--iron)", flexShrink: 0 },
-  leftBody: { overflowY: "auto", overflowX: "hidden", flex: 1, padding: "8px 0 12px" },
-  mapWrap: { position: "absolute", inset: 0, perspective: "1400px", perspectiveOrigin: "50% 30%" },
-  mapTilted: {
-    position: "absolute", inset: "-12% -8% -8% -8%",
-    transformOrigin: "50% 100%", transformStyle: "preserve-3d", background: "#04040A",
-  },
-  presence: {
-    position: "absolute", left: 64, right: 0, bottom: 0, height: 86,
-    background: "linear-gradient(to top, rgba(4,4,10,0.96), rgba(4,4,10,0.5))",
-    backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-    borderTop: "1px solid var(--iron)", display: "flex", alignItems: "center",
-    gap: 0, padding: "0 22px", overflowX: "auto", zIndex: 20,
-  },
-  controls: {
-    position: "absolute", right: 18, bottom: 110,
-    display: "flex", flexDirection: "column", gap: 8, zIndex: 25,
-  },
-  controlBtn: (active) => ({
-    width: 40, height: 40,
-    background: active ? "rgba(0,212,170,0.12)" : "rgba(15,15,26,0.9)",
-    backdropFilter: "blur(8px)",
-    border: `1px solid ${active ? "var(--krypton)" : "var(--iron)"}`,
-    borderRadius: 10, color: active ? "var(--krypton)" : "var(--text-secondary)",
-    cursor: "pointer", display: "inline-flex", alignItems: "center",
-    justifyContent: "center", fontSize: 16, transition: "all 160ms ease",
-    fontFamily: "var(--font-mono)",
-  }),
-  buildBtn: {
-    position: "absolute", top: 18, right: 296, height: 38, padding: "0 18px",
-    background: "transparent", border: "1px solid var(--krypton)", borderRadius: 10,
-    color: "var(--krypton)", fontFamily: "var(--font-ui)", fontSize: 13, fontWeight: 500,
-    cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8,
-    zIndex: 30, transition: "all 160ms ease",
-  },
-  compass: {
-    position: "absolute", top: 74, right: 296, width: 44, height: 44,
-    background: "rgba(15,15,26,0.85)", backdropFilter: "blur(8px)",
-    border: "1px solid var(--iron)", borderRadius: "50%", zIndex: 25,
-    display: "flex", alignItems: "center", justifyContent: "center",
-    fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-dim)", letterSpacing: "0.1em",
-  },
+// ── GRID MATH ────────────────────────────────────────────────────────
+const GRID_SIZE = 24;
+const TILE_W = 60;
+const TILE_H = 60;
+
+const seeded = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+
+const TERRAIN_COLORS = {
+  plains: { fill: "#0D1A10", border: "rgba(45,255,120,0.1)"   },
+  hills:  { fill: "#14110A", border: "rgba(201,168,76,0.12)"  },
+  water:  { fill: "#060D18", border: "rgba(0,160,255,0.18)"   },
+  forest: { fill: "#091510", border: "rgba(30,180,70,0.15)"   },
+  urban:  { fill: "#0C0C1C", border: "rgba(160,160,255,0.15)" },
 };
 
-// ── DATA ─────────────────────────────────────────────────────────
+const TERRAIN_MAP = Array.from({ length: GRID_SIZE }, (_, r) =>
+  Array.from({ length: GRID_SIZE }, (_, c) => {
+    const s = seeded(r * GRID_SIZE + c);
+    if (s < 0.12) return "water";
+    if (s < 0.28) return "forest";
+    if (s < 0.42) return "hills";
+    if (s < 0.52) return "urban";
+    return "plains";
+  })
+);
+
+const getTerrain = (col, row) => TERRAIN_MAP[row]?.[col] || "plains";
+
+// ── STAMP DATA ────────────────────────────────────────────────────────
 const STAMP_CATEGORIES = [
   {
     id: "env", label: "Environmental", color: "#2DFF78", colorRgb: "45,255,120",
@@ -120,15 +91,14 @@ const INITIAL_BLOBS = [
 ];
 
 const CHARACTERS_MAP = [
-  { id: "kal",   name: "Kal-El",   x: 39, y: 45, color: "0,212,170",   img: "assets/char-superman-cavill.webp", status: "active",    state: "Guilt 82%"  },
-  { id: "bruce", name: "Bruce",    x: 50, y: 56, color: "107,107,138", img: "assets/batman.webp",               status: "observing", state: "Calculating" },
-  { id: "diana", name: "Diana",    x: 60, y: 30, color: "201,168,76",  img: "assets/char-saint.jpg",            status: "active",    state: "Centered"    },
-  { id: "lois",  name: "Lois",     x: 41, y: 47, color: "240,208,128", img: "assets/lois.jpg",                  status: "active",    state: "Fear 68%"   },
-  { id: "zod",   name: "Zod",      x: 85, y: 25, color: "204,34,0",    img: "assets/char-batman2.webp",         status: "inactive",  state: "—"           },
-  { id: "jon",   name: "Jonathan", x: 28, y: 62, color: "212,136,76",  img: "assets/char-robin.jpeg",           status: "deceased",  state: "Deceased"    },
+  { id: "kal",   name: "Kal-El",   col: 8,  row: 10, color: "0,212,170",   img: "assets/char-superman-cavill.webp", status: "active",    state: "Guilt 82%"  },
+  { id: "bruce", name: "Bruce",    col: 12, row: 14, color: "107,107,138", img: "assets/batman.webp",               status: "observing", state: "Calculating" },
+  { id: "diana", name: "Diana",    col: 15, row: 7,  color: "201,168,76",  img: "assets/char-saint.jpg",            status: "active",    state: "Centered"    },
+  { id: "lois",  name: "Lois",     col: 9,  row: 11, color: "240,208,128", img: "assets/lois.jpg",                  status: "active",    state: "Fear 68%"    },
+  { id: "zod",   name: "Zod",      col: 20, row: 5,  color: "204,34,0",    img: "assets/char-batman2.webp",         status: "inactive",  state: "—"           },
+  { id: "jon",   name: "Jonathan", col: 6,  row: 16, color: "212,136,76",  img: "assets/char-robin.jpeg",           status: "deceased",  state: "Deceased"    },
 ];
 
-// Layer data — new format with toggle state and map overlay config
 const LAYERS_DATA = [
   { id: "social",      label: "SOCIAL COHESION",     color: "#00C9A7", description: "Connection and trust between populations",      blendColor: "rgba(0,201,167,0.12)",   active: true  },
   { id: "economic",    label: "ECONOMIC PRESSURE",   color: "#C9A84C", description: "Wealth concentration and poverty distribution",  blendColor: "rgba(201,168,76,0.12)",  active: true  },
@@ -138,124 +108,42 @@ const LAYERS_DATA = [
   { id: "sensitivity", label: "SENSITIVITY MAP",     color: "#E0B0FF", description: "Character psychological exposure to this zone",  blendColor: "rgba(224,176,255,0.10)", active: false },
 ];
 
-const TRAILS = {
-  kal:   "M 12,80 C 22,72 28,60 34,52 L 39,45",
-  bruce: "M 62,82 C 58,74 54,66 52,60 L 50,56",
-  diana: "M 90,18 Q 76,16 68,22 L 60,30",
-  lois:  "M 32,72 Q 36,60 38,52 L 41,47",
+// ── WORLD PIECES ──────────────────────────────────────────────────────
+const WORLD_PIECES = {
+  terrain: [
+    { id: "mountain",    label: "Mountain",   icon: "⛰️", height: 80 },
+    { id: "lake",        label: "Lake",       icon: "💧", height: 5  },
+    { id: "forest-p",   label: "Forest",     icon: "🌲", height: 40 },
+    { id: "desert",     label: "Desert",     icon: "🏜️", height: 20 },
+  ],
+  settlements: [
+    { id: "city",       label: "City",       icon: "🏙️", height: 60 },
+    { id: "village",    label: "Village",    icon: "🏘️", height: 30 },
+    { id: "fortress",   label: "Fortress",   icon: "🏰", height: 70 },
+    { id: "ruins",      label: "Ruins",      icon: "🏚️", height: 25 },
+  ],
+  power: [
+    { id: "reactor",    label: "Reactor",    icon: "⚛️", height: 50 },
+    { id: "tower",      label: "Tower",      icon: "📡", height: 90 },
+    { id: "lab",        label: "Lab",        icon: "🔬", height: 40 },
+    { id: "vault",      label: "Vault",      icon: "🔒", height: 30 },
+  ],
+  infrastructure: [
+    { id: "highway",    label: "Highway",    icon: "🛣️", height: 15 },
+    { id: "bridge",     label: "Bridge",     icon: "🌉", height: 35 },
+    { id: "port",       label: "Port",       icon: "⚓", height: 20 },
+    { id: "airport",    label: "Airport",    icon: "✈️", height: 25 },
+  ],
 };
 
-// Landscape mode: seeded building clusters and road network
-const BUILDING_CLUSTERS = [
-  { x: 45, y: 35, w: 80, h: 60, r: 0,   g: 212, b: 255 },
-  { x: 48, y: 38, w: 40, h: 30, r: 0,   g: 212, b: 255 },
-  { x: 55, y: 40, w: 60, h: 45, r: 204, g: 34,  b: 0   },
-  { x: 70, y: 30, w: 50, h: 70, r: 45,  g: 255, b: 120 },
-  { x: 30, y: 55, w: 35, h: 25, r: 201, g: 168, b: 76  },
-  { x: 80, y: 50, w: 90, h: 40, r: 123, g: 47,  b: 255 },
+const PIECE_CATEGORIES = [
+  { id: "terrain",        label: "TERRAIN",       color: "#2DFF78" },
+  { id: "settlements",    label: "SETTLEMENTS",   color: "#00D4FF" },
+  { id: "power",          label: "POWER",         color: "#E0B0FF" },
+  { id: "infrastructure", label: "INFRA",         color: "#C9A84C" },
 ];
 
-const ROAD_PATHS = [
-  "M 200 300 Q 400 250 650 320",
-  "M 300 200 L 300 600",
-  "M 100 400 L 900 400",
-  "M 450 100 Q 500 300 480 600",
-  "M 600 150 L 750 550",
-];
-
-// ── MAP BASE ────────────────────────────────────────────────────────
-const MapBase = ({ mapMode, activeLayers }) => {
-  if (mapMode === "landscape") {
-    return (
-      <React.Fragment>
-        <div style={{ position: "absolute", inset: 0, background: "#060612" }} />
-        <div style={{
-          position: "absolute", inset: 0, pointerEvents: "none",
-          backgroundImage: `
-            linear-gradient(rgba(30,30,60,0.6) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(30,30,60,0.6) 1px, transparent 1px),
-            linear-gradient(rgba(20,20,40,0.3) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(20,20,40,0.3) 1px, transparent 1px)
-          `,
-          backgroundSize: "80px 80px, 80px 80px, 20px 20px, 20px 20px",
-        }} />
-        {BUILDING_CLUSTERS.map((c, i) => (
-          <div key={i} style={{
-            position: "absolute", left: `${c.x}%`, top: `${c.y}%`,
-            width: `${c.w}px`, height: `${c.h}px`,
-            transform: "translate(-50%, -50%)",
-            background: `rgba(${c.r},${c.g},${c.b},0.15)`,
-            border: `1px solid rgba(${c.r},${c.g},${c.b},0.3)`,
-            borderRadius: 4, pointerEvents: "none",
-          }} />
-        ))}
-        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.3, pointerEvents: "none" }}>
-          {ROAD_PATHS.map((path, i) => (
-            <path key={i} d={path} stroke="#2A2A4A" strokeWidth="2" fill="none" />
-          ))}
-        </svg>
-        {activeLayers.map(layer => (
-          <div key={layer.id} style={{
-            position: "absolute", inset: 0,
-            background: layer.blendColor, mixBlendMode: "screen", pointerEvents: "none",
-          }} />
-        ))}
-      </React.Fragment>
-    );
-  }
-
-  // Pressure mode — dark satellite aesthetic
-  return (
-    <React.Fragment>
-      {/* Street grid */}
-      <div style={{
-        position: "absolute", inset: 0, pointerEvents: "none",
-        backgroundImage: `
-          linear-gradient(rgba(26,26,46,0.4) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(26,26,46,0.4) 1px, transparent 1px)
-        `,
-        backgroundSize: "40px 40px",
-      }} />
-      {/* Topographic depth overlay */}
-      <div style={{
-        position: "absolute", inset: 0, pointerEvents: "none",
-        backgroundImage: `
-          radial-gradient(ellipse 800px 400px at 60% 50%, rgba(12,12,24,0.8) 0%, transparent 70%),
-          radial-gradient(ellipse 400px 600px at 30% 70%, rgba(8,8,16,0.6) 0%, transparent 60%)
-        `,
-      }} />
-      {/* Land masses with topo detail */}
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{
-        position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none",
-      }}>
-        <defs>
-          <pattern id="streetGridPat" x="0" y="0" width="3" height="3" patternUnits="userSpaceOnUse">
-            <path d="M 3 0 L 0 0 0 3" fill="none" stroke="rgba(26,26,48,0.4)" strokeWidth="0.06"/>
-          </pattern>
-          <filter id="landBlur"><feGaussianBlur stdDeviation="0.3"/></filter>
-        </defs>
-        <g fill="#0C0C18" filter="url(#landBlur)">
-          <path d="M 8,30 Q 18,22 30,28 Q 42,34 48,48 Q 54,62 48,72 Q 38,80 22,76 Q 10,68 8,52 Z"/>
-          <path d="M 55,38 Q 70,32 84,40 Q 92,48 88,62 Q 78,70 66,68 Q 56,62 55,52 Z"/>
-          <path d="M 22,82 Q 30,80 36,84 Q 38,90 32,92 Q 24,92 22,86 Z"/>
-          <path d="M 70,18 Q 82,14 90,20 Q 92,28 84,30 Q 74,28 70,22 Z"/>
-        </g>
-        <g fill="url(#streetGridPat)">
-          <path d="M 8,30 Q 18,22 30,28 Q 42,34 48,48 Q 54,62 48,72 Q 38,80 22,76 Q 10,68 8,52 Z"/>
-          <path d="M 55,38 Q 70,32 84,40 Q 92,48 88,62 Q 78,70 66,68 Q 56,62 55,52 Z"/>
-        </g>
-        <g stroke="rgba(60,60,90,0.18)" strokeWidth="0.08" fill="none">
-          <path d="M 15,40 Q 25,36 35,42"/>
-          <path d="M 18,52 Q 30,50 38,56"/>
-          <path d="M 60,46 Q 72,42 82,50"/>
-          <path d="M 64,58 Q 74,56 82,60"/>
-        </g>
-      </svg>
-    </React.Fragment>
-  );
-};
-
-// ── PRESSURE BLOBS — div-based with screen blend mode ──────────────
+// ── BLOB COLORS & LAYER POSITIONS ────────────────────────────────────
 const BLOB_COLORS = {
   trauma:   { core: "rgba(0,212,255,0.7)",   mid: "rgba(0,150,200,0.3)"   },
   conflict: { core: "rgba(204,34,0,0.8)",    mid: "rgba(150,20,0,0.35)"   },
@@ -264,6 +152,214 @@ const BLOB_COLORS = {
   cosmic:   { core: "rgba(123,47,255,0.7)",  mid: "rgba(80,20,200,0.3)"   },
 };
 
+const LAYER_POSITIONS = {
+  social:      { cx: "50%", cy: "50%", rx: "60%", ry: "40%" },
+  economic:    { cx: "45%", cy: "40%", rx: "40%", ry: "30%" },
+  biological:  { cx: "55%", cy: "55%", rx: "50%", ry: "45%" },
+  political:   { cx: "45%", cy: "45%", rx: "45%", ry: "35%" },
+  trauma:      { cx: "47%", cy: "38%", rx: "25%", ry: "20%" },
+  sensitivity: { cx: "50%", cy: "50%", rx: "55%", ry: "50%" },
+};
+
+// ── ANIMATION CSS ────────────────────────────────────────────────────
+const animCSS = `
+  @keyframes wpmRingPulse {
+    0%   { transform: scale(0.85); opacity: 1; }
+    100% { transform: scale(1.6);  opacity: 0; }
+  }
+  @keyframes wpmCharIdle {
+    0%, 100% { transform: scale(1);    }
+    50%      { transform: scale(1.04); }
+  }
+  @keyframes blobBreath {
+    from { transform: translate(-50%, -50%) scale(0.97); opacity: 0.85; }
+    to   { transform: translate(-50%, -50%) scale(1.03); opacity: 1;    }
+  }
+  @keyframes layerFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pieceDropIn {
+    from { opacity: 0; transform: translate(-50%, -60%) translateZ(120px) rotateZ(45deg) rotateX(-52deg); }
+    to   { opacity: 1; }
+  }
+  .wpm-blob-conflict { animation-duration: 1.6s !important; }
+  .wpm-blob-bio      { animation-duration: 4s   !important; }
+  .wpm-blob-trauma   { animation-duration: 6s   !important; }
+`;
+
+// ── FLOATING CHARACTER ICON ───────────────────────────────────────────
+const FloatingCharacterIcon = ({ char: c, col, row, isActive, onSelect, onDragStart }) => {
+  const [hovered, setHovered] = React.useState(false);
+  const x = col * TILE_W + TILE_W / 2;
+  const y = row * TILE_H + TILE_H / 2;
+  const statusDot = c.status === "active" ? "#2DFF78" :
+                    c.status === "observing" ? "#C9A84C" :
+                    c.status === "deceased" ? "#3A3A55" : "#CC2200";
+  return (
+    <div
+      draggable
+      onDragStart={(e) => { e.dataTransfer.setData("charId", c.id); onDragStart(); }}
+      onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "absolute", left: x, top: y,
+        transform: `translate(-50%, -50%) translateZ(60px) rotateZ(45deg) rotateX(-52deg)`,
+        transformStyle: "preserve-3d",
+        cursor: "pointer", zIndex: isActive ? 20 : 10,
+      }}
+    >
+      <div style={{ position: "relative", width: 44, height: 44 }}>
+        {isActive && (
+          <div style={{
+            position: "absolute", inset: -8, borderRadius: "50%",
+            border: "1.5px solid rgba(0,212,170,0.8)",
+            animation: "wpmRingPulse 2s ease-out infinite",
+          }} />
+        )}
+        {/* Glow halo */}
+        <div style={{
+          position: "absolute", inset: -6, borderRadius: "50%",
+          background: `radial-gradient(circle, rgba(${c.color},0.35) 0%, transparent 70%)`,
+          filter: "blur(4px)", opacity: isActive ? 1 : 0.4,
+        }} />
+        {/* Glass bubble */}
+        <div style={{
+          position: "relative", width: 44, height: 44, borderRadius: "50%",
+          overflow: "hidden",
+          border: `2px solid ${isActive ? "rgba(0,212,170,0.9)" : "rgba(255,255,255,0.2)"}`,
+          boxShadow: isActive
+            ? `0 0 20px rgba(0,212,170,0.6), 0 8px 24px rgba(0,0,0,0.8)`
+            : `0 6px 20px rgba(0,0,0,0.7)`,
+          filter: c.status === "deceased" ? "grayscale(1) brightness(0.6)" : "none",
+          animation: "wpmCharIdle 2.4s ease-in-out infinite",
+          animationDelay: `${c.id.length * 200}ms`,
+        }}>
+          <img src={c.img} alt={c.name}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
+          />
+          {/* Glass sheen */}
+          <div style={{
+            position: "absolute", top: 0, left: 0, right: 0, height: "55%",
+            background: "linear-gradient(to bottom, rgba(255,255,255,0.18), transparent)",
+            borderRadius: "50% 50% 0 0", pointerEvents: "none",
+          }} />
+        </div>
+        {/* Status dot */}
+        <div style={{
+          position: "absolute", bottom: -1, right: -1,
+          width: 10, height: 10, borderRadius: "50%",
+          background: statusDot, border: "2px solid #04040A",
+          boxShadow: c.status === "active" ? `0 0 8px ${statusDot}` : "none",
+        }} />
+      </div>
+
+      {/* Hover tooltip */}
+      {hovered && (
+        <div style={{
+          position: "absolute", bottom: 52, left: "50%",
+          transform: "translateX(-50%)",
+          background: "rgba(8,8,16,0.96)", border: "1px solid rgba(0,212,170,0.3)",
+          borderRadius: 8, padding: "6px 12px", whiteSpace: "nowrap",
+          fontFamily: "var(--font-ui)", fontSize: 11, color: "#F0F0FF",
+          pointerEvents: "none", zIndex: 200,
+          boxShadow: "0 4px 16px rgba(0,0,0,0.7)",
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: 2 }}>{c.name}</div>
+          <div style={{ fontSize: 10, color: "var(--text-dim)" }}>{c.state}</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── PLACED PIECE ─────────────────────────────────────────────────────
+const PlacedPiece = ({ piece, col, row }) => {
+  const x = col * TILE_W + TILE_W / 2;
+  const y = row * TILE_H + TILE_H / 2;
+  return (
+    <div style={{
+      position: "absolute", left: x, top: y,
+      transform: `translate(-50%, -50%) translateZ(${piece.height || 30}px) rotateZ(45deg) rotateX(-52deg)`,
+      transformStyle: "preserve-3d",
+      pointerEvents: "none",
+      animation: "pieceDropIn 0.35s cubic-bezier(0.34,1.56,0.64,1) backwards",
+    }}>
+      <div style={{ fontSize: 22, textAlign: "center", filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.9))" }}>
+        {piece.icon}
+      </div>
+      <div style={{
+        fontSize: 9, color: "rgba(255,255,255,0.45)", textAlign: "center",
+        fontFamily: "var(--font-ui)", letterSpacing: "0.04em", marginTop: 1,
+      }}>{piece.label}</div>
+    </div>
+  );
+};
+
+// ── PIECE LIBRARY ────────────────────────────────────────────────────
+const PieceLibrary = ({ onDragStart }) => {
+  const [openCat, setOpenCat] = React.useState("terrain");
+  return (
+    <div>
+      {PIECE_CATEGORIES.map(cat => (
+        <div key={cat.id}>
+          <button
+            onClick={() => setOpenCat(o => o === cat.id ? null : cat.id)}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              width: "100%", padding: "9px 18px", background: "transparent",
+              border: "none", borderBottom: "1px solid var(--iron)", cursor: "pointer",
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: cat.color, display: "inline-block" }} />
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.16em", color: cat.color }}>
+                {cat.label}
+              </span>
+            </span>
+            <span style={{ color: "var(--text-dim)", fontSize: 12 }}>{openCat === cat.id ? "−" : "+"}</span>
+          </button>
+          {openCat === cat.id && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, padding: "8px 12px 10px" }}>
+              {WORLD_PIECES[cat.id].map(piece => (
+                <div
+                  key={piece.id}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("pieceId", piece.id);
+                    e.dataTransfer.setData("pieceCategory", cat.id);
+                    onDragStart(piece);
+                  }}
+                  style={{
+                    padding: "8px 4px", background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.07)", borderRadius: 8,
+                    cursor: "grab", textAlign: "center",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                    transition: "all 0.12s ease",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                    e.currentTarget.style.borderColor = cat.color + "44";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
+                  }}
+                >
+                  <span style={{ fontSize: 20 }}>{piece.icon}</span>
+                  <span style={{ fontSize: 10, color: "var(--text-secondary)", fontFamily: "var(--font-ui)" }}>
+                    {piece.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ── PRESSURE BLOBS ───────────────────────────────────────────────────
 const PressureBlobsLayer = ({ blobs, selectedId, onSelect }) => (
   <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 2 }}>
     {blobs.map((blob, index) => {
@@ -275,25 +371,21 @@ const PressureBlobsLayer = ({ blobs, selectedId, onSelect }) => (
           className={`wpm-blob wpm-blob-${blob.kind}`}
           style={{
             position: "absolute",
-            left: `${blob.x}%`,
-            top: `${blob.y}%`,
-            width: `${blob.r * 2}px`,
-            height: `${blob.r * 2}px`,
+            left: `${blob.x}%`, top: `${blob.y}%`,
+            width: `${blob.r * 2}px`, height: `${blob.r * 2}px`,
             transform: "translate(-50%, -50%)",
             mixBlendMode: "screen",
             background: `radial-gradient(ellipse at center, ${colors.core} 0%, ${colors.mid} 35%, transparent 70%)`,
             animation: `blobBreath ${3 + index * 0.7}s ease-in-out infinite alternate`,
             borderRadius: "50%",
-            pointerEvents: "all",
-            cursor: "pointer",
+            pointerEvents: "all", cursor: "pointer",
           }}
           onClick={(e) => { e.stopPropagation(); onSelect(blob); }}
         >
           {isSelected && (
             <div style={{
               position: "absolute", inset: 0, borderRadius: "50%",
-              border: `1.5px solid rgba(${blob.color},0.7)`,
-              boxSizing: "border-box",
+              border: `1.5px solid rgba(${blob.color},0.7)`, boxSizing: "border-box",
             }} />
           )}
         </div>
@@ -302,24 +394,12 @@ const PressureBlobsLayer = ({ blobs, selectedId, onSelect }) => (
   </div>
 );
 
-// ── LAYER MAP OVERLAYS — elliptical tints per active layer ──────────
-const LAYER_POSITIONS = {
-  social:      { cx: "50%", cy: "50%", rx: "60%", ry: "40%" },
-  economic:    { cx: "45%", cy: "40%", rx: "40%", ry: "30%" },
-  biological:  { cx: "55%", cy: "55%", rx: "50%", ry: "45%" },
-  political:   { cx: "45%", cy: "45%", rx: "45%", ry: "35%" },
-  trauma:      { cx: "47%", cy: "38%", rx: "25%", ry: "20%" },
-  sensitivity: { cx: "50%", cy: "50%", rx: "55%", ry: "50%" },
-};
-
+// ── LAYER MAP OVERLAYS ───────────────────────────────────────────────
 const LayerMapOverlay = ({ layer }) => {
   const pos = LAYER_POSITIONS[layer.id] || LAYER_POSITIONS.social;
   const gradId = `layer-grad-${layer.id}`;
   return (
-    <div style={{
-      position: "absolute", inset: 0, pointerEvents: "none", zIndex: 3,
-      animation: "layerFadeIn 0.4s ease forwards",
-    }}>
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 3, animation: "layerFadeIn 0.4s ease forwards" }}>
       <svg width="100%" height="100%" style={{ position: "absolute", inset: 0 }}>
         <defs>
           <radialGradient id={gradId} cx={pos.cx} cy={pos.cy} r="50%">
@@ -333,112 +413,152 @@ const LayerMapOverlay = ({ layer }) => {
   );
 };
 
-// ── LAYER PANEL — toggle-based with stacked GIS preview ────────────
-const LayerPanel = ({ layers, onToggle, mapMode, onModeChange }) => {
+// ── LAYER PANEL ──────────────────────────────────────────────────────
+const LayerPanel = ({ layers, onToggle, mapMode, onModeChange, open, onToggleOpen }) => {
   const activeLayers = layers.filter(l => l.active);
   return (
     <div style={{
-      position: "absolute", top: 16, right: 16, width: 260,
+      position: "absolute", top: 16, right: 16, width: 256,
       background: "rgba(8,8,16,0.92)", border: "1px solid #1A1A2E",
-      borderRadius: 12, padding: 16, zIndex: 50, backdropFilter: "blur(12px)",
-      WebkitBackdropFilter: "blur(12px)",
+      borderRadius: 12, zIndex: 50, backdropFilter: "blur(12px)",
+      WebkitBackdropFilter: "blur(12px)", overflow: "hidden",
     }}>
-      {/* Map mode toggle */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 10, color: "#6B6B8A", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 8 }}>
-          MAP VIEW
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-          {[{ id: "pressure", label: "PRESSURE" }, { id: "landscape", label: "LANDSCAPE" }].map(mode => (
-            <button key={mode.id} onClick={() => onModeChange(mode.id)} style={{
-              padding: "8px 0",
-              background: mapMode === mode.id ? "rgba(0,201,167,0.08)" : "transparent",
-              border: `1px solid ${mapMode === mode.id ? "#00C9A7" : "#1A1A2E"}`,
-              borderRadius: 8,
-              color: mapMode === mode.id ? "#00C9A7" : "#6B6B8A",
-              fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
-              cursor: "pointer", transition: "all 0.15s ease", fontFamily: "var(--font-ui)",
-            }}>
-              {mode.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ height: 1, background: "#1A1A2E", marginBottom: 14 }} />
-
-      {/* Layer list header */}
-      <div style={{
-        fontSize: 10, color: "#6B6B8A", letterSpacing: "0.15em", textTransform: "uppercase",
-        marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center",
+      {/* Accordion header */}
+      <button onClick={onToggleOpen} style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        width: "100%", padding: "12px 16px", background: "transparent",
+        border: "none", cursor: "pointer",
       }}>
-        <span>MAP LAYERS</span>
-        <button
-          onClick={() => layers.forEach(l => onToggle(l.id, false))}
-          style={{ background: "transparent", border: "none", color: "#6B6B8A", fontSize: 10, cursor: "pointer" }}
-        >CLEAR ALL</button>
-      </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 10, color: "#6B6B8A", letterSpacing: "0.15em", textTransform: "uppercase", fontFamily: "var(--font-ui)" }}>
+            MAP LAYERS
+          </span>
+          <span style={{
+            fontSize: 10, fontFamily: "var(--font-mono)",
+            background: "rgba(0,201,167,0.15)", color: "#00C9A7",
+            border: "1px solid rgba(0,201,167,0.3)", borderRadius: 999,
+            padding: "1px 7px",
+          }}>{activeLayers.length}</span>
+        </div>
+        <span style={{ color: "#6B6B8A", fontSize: 14, lineHeight: 1 }}>{open ? "−" : "+"}</span>
+      </button>
 
-      {/* Layer toggles */}
-      {layers.map((layer, index) => (
-        <div key={layer.id} style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "8px 0",
-          borderBottom: index < layers.length - 1 ? "1px solid #0F0F1A" : "none",
-          cursor: "pointer",
-        }} onClick={() => onToggle(layer.id, !layer.active)}>
+      {open && (
+        <div style={{ padding: "0 16px 16px" }}>
+          {/* Map mode toggle */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 14 }}>
+            {[{ id: "pressure", label: "PRESSURE" }, { id: "landscape", label: "ISO GRID" }].map(mode => (
+              <button key={mode.id} onClick={() => onModeChange(mode.id)} style={{
+                padding: "7px 0",
+                background: mapMode === mode.id ? "rgba(0,201,167,0.08)" : "transparent",
+                border: `1px solid ${mapMode === mode.id ? "#00C9A7" : "#1A1A2E"}`,
+                borderRadius: 8,
+                color: mapMode === mode.id ? "#00C9A7" : "#6B6B8A",
+                fontSize: 10, fontWeight: 600, letterSpacing: "0.08em",
+                cursor: "pointer", fontFamily: "var(--font-ui)",
+              }}>
+                {mode.label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ height: 1, background: "#1A1A2E", marginBottom: 12 }} />
+
+          {/* Layer list header */}
           <div style={{
-            width: 16, height: 16, borderRadius: "50%", flexShrink: 0,
-            border: `2px solid ${layer.active ? layer.color : "#3A3A5C"}`,
-            background: layer.active ? layer.color : "transparent",
-            transition: "all 0.15s ease",
-            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 10, color: "#6B6B8A", letterSpacing: "0.1em", textTransform: "uppercase",
+            marginBottom: 8, display: "flex", justifyContent: "space-between",
           }}>
-            {layer.active && (
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#080810" }} />
-            )}
+            <span>LAYERS</span>
+            <button
+              onClick={() => layers.forEach(l => onToggle(l.id, false))}
+              style={{ background: "transparent", border: "none", color: "#6B6B8A", fontSize: 10, cursor: "pointer" }}
+            >CLEAR</button>
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{
-              fontSize: 11, fontWeight: 600, letterSpacing: "0.05em",
-              color: layer.active ? "#F0F0FF" : "#6B6B8A",
-              transition: "color 0.15s ease", fontFamily: "var(--font-ui)",
-            }}>{layer.label}</div>
-          </div>
-          {layer.active && (
-            <div style={{ width: 3, height: 20, borderRadius: 2, background: layer.color, flexShrink: 0 }} />
-          )}
-        </div>
-      ))}
 
-      {/* Stacked GIS layer preview */}
-      <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #1A1A2E" }}>
-        <div style={{ fontSize: 10, color: "#6B6B8A", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>
-          ACTIVE LAYERS
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 3, perspective: "200px" }}>
-          {activeLayers.map((layer, i) => (
-            <div key={layer.id} style={{
-              height: 8, borderRadius: 3,
-              background: `linear-gradient(90deg, ${layer.color}40, ${layer.color}20)`,
-              border: `1px solid ${layer.color}30`,
-              transform: `translateY(${i * -1}px)`,
-              opacity: Math.max(0.45, 1 - i * 0.1),
-              transition: "all 0.2s ease", position: "relative",
-            }}>
+          {/* Circle toggles */}
+          {layers.map((layer, index) => (
+            <div key={layer.id}
+              style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "7px 0",
+                borderBottom: index < layers.length - 1 ? "1px solid #0F0F1A" : "none",
+                cursor: "pointer",
+              }}
+              onClick={() => onToggle(layer.id, !layer.active)}
+            >
               <div style={{
-                position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
-                width: 4, height: 4, borderRadius: "50%", background: layer.color,
-              }} />
+                width: 15, height: 15, borderRadius: "50%", flexShrink: 0,
+                border: `2px solid ${layer.active ? layer.color : "#3A3A5C"}`,
+                background: layer.active ? layer.color : "transparent",
+                transition: "all 0.15s ease",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {layer.active && <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#080810" }} />}
+              </div>
+              <div style={{
+                flex: 1, fontSize: 11, fontWeight: 600, letterSpacing: "0.04em",
+                color: layer.active ? "#F0F0FF" : "#6B6B8A",
+                transition: "color 0.15s ease", fontFamily: "var(--font-ui)",
+              }}>{layer.label}</div>
+              {layer.active && (
+                <div style={{ width: 3, height: 18, borderRadius: 2, background: layer.color, flexShrink: 0 }} />
+              )}
             </div>
           ))}
-          {activeLayers.length === 0 && (
-            <div style={{ fontSize: 11, color: "#3A3A5C", fontStyle: "italic" }}>No layers active</div>
+
+          {/* Stacked GIS preview */}
+          {activeLayers.length > 0 && (
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #1A1A2E" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                {activeLayers.map((layer, i) => (
+                  <div key={layer.id} style={{
+                    height: 7, borderRadius: 3,
+                    background: `linear-gradient(90deg, ${layer.color}40, ${layer.color}20)`,
+                    border: `1px solid ${layer.color}30`,
+                    transform: `translateY(${i * -1}px)`,
+                    opacity: Math.max(0.4, 1 - i * 0.1),
+                    position: "relative",
+                  }}>
+                    <div style={{
+                      position: "absolute", right: 5, top: "50%", transform: "translateY(-50%)",
+                      width: 3, height: 3, borderRadius: "50%", background: layer.color,
+                    }} />
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 };
+
+// ── ZOOM CONTROLS ────────────────────────────────────────────────────
+const zoomBtnStyle = {
+  width: 40, height: 34,
+  background: "rgba(15,15,26,0.9)", border: "1px solid var(--iron)",
+  borderRadius: 8, color: "var(--text-secondary)", cursor: "pointer",
+  display: "inline-flex", alignItems: "center", justifyContent: "center",
+  fontSize: 18, fontFamily: "var(--font-mono)", transition: "all 120ms ease",
+};
+
+const ZoomControls = ({ zoom, onZoom, onReset }) => (
+  <div style={{
+    position: "absolute", right: 18, bottom: 108,
+    display: "flex", flexDirection: "column", gap: 5, zIndex: 25, alignItems: "center",
+  }}>
+    <button style={zoomBtnStyle} onClick={() => onZoom(z => Math.min(2.5, z + 0.2))}>+</button>
+    <div style={{
+      width: 40, padding: "4px 0",
+      background: "rgba(15,15,26,0.9)", border: "1px solid var(--iron)", borderRadius: 7,
+      fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-dim)",
+      textAlign: "center", letterSpacing: "0.04em",
+    }}>{Math.round(zoom * 100)}%</div>
+    <button style={zoomBtnStyle} onClick={() => onZoom(z => Math.max(0.2, z - 0.2))}>−</button>
+    <button style={{ ...zoomBtnStyle, marginTop: 4, fontSize: 14 }} onClick={onReset} title="Reset view">⌖</button>
+  </div>
+);
 
 // ── STAMP SECTION ────────────────────────────────────────────────────
 const StampSection = ({ cat, selectedId, onSelect, expanded }) => {
@@ -458,8 +578,8 @@ const StampSection = ({ cat, selectedId, onSelect, expanded }) => {
         border: "none", cursor: "pointer", color: "var(--text-secondary)",
       }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: cat.color }}/>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: cat.color, opacity: 0.95 }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: cat.color, display: "inline-block" }}/>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: cat.color }}>
             {cat.label}
           </span>
         </span>
@@ -495,7 +615,7 @@ const StampSection = ({ cat, selectedId, onSelect, expanded }) => {
   );
 };
 
-// ── STAMP ICONS SVG (cursor preview + emoji markers only) ───────────
+// ── STAMP ICONS SVG ──────────────────────────────────────────────────
 const PressureIconsSVG = ({ blobs, cursorPos, previewStamp }) => (
   <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 5 }}>
     {blobs.map(b => (
@@ -529,212 +649,7 @@ const PressureIconsSVG = ({ blobs, cursorPos, previewStamp }) => (
   </svg>
 );
 
-// ── TRAUMA MEMORY STAIN ─────────────────────────────────────────────
-const TraumaMemoryStain = () => (
-  <div style={{
-    position: "absolute", left: "37%", top: "42%",
-    width: 200, height: 200, borderRadius: "50%", pointerEvents: "none", zIndex: 3,
-    background: "radial-gradient(circle, rgba(0,212,170,0.18) 0%, rgba(0,212,170,0) 70%)",
-    mixBlendMode: "screen",
-  }}>
-    <span style={{
-      position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, 30px)",
-      fontFamily: "var(--font-mono)", fontSize: 9, color: "rgba(0,212,170,0.65)",
-      letterSpacing: "0.18em", textTransform: "uppercase", whiteSpace: "nowrap",
-    }}>World Engine · Year 33</span>
-  </div>
-);
-
-// ── TRAILS ──────────────────────────────────────────────────────────
-const TrailsLayer = ({ activeChar }) => {
-  const colors = {
-    kal: "0,212,170", bruce: "107,107,138", diana: "201,168,76", lois: "240,208,128",
-  };
-  return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{
-      position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none",
-    }}>
-      {Object.entries(TRAILS).map(([cid, path]) => {
-        const isActive = cid === activeChar;
-        return (
-          <g key={cid} style={{ opacity: isActive ? 0.95 : 0.4 }}>
-            <path d={path} fill="none"
-              stroke={`rgba(${colors[cid]},${isActive ? 0.85 : 0.45})`}
-              strokeWidth="0.45" strokeLinecap="round"
-              filter={isActive ? `drop-shadow(0 0 1.5px rgba(${colors[cid]},0.8))` : "none"}
-            />
-            <circle r="0.55" fill={`rgb(${colors[cid]})`}>
-              <animateMotion dur="6s" repeatCount="indefinite" path={path}/>
-            </circle>
-          </g>
-        );
-      })}
-    </svg>
-  );
-};
-
-// ── CITY LABELS ─────────────────────────────────────────────────────
-const CityLabels = () => {
-  const labels = [
-    { name: "Metropolis", x: 39, y: 42, active: true },
-    { name: "Gotham",     x: 50, y: 55, active: false },
-    { name: "Smallville", x: 28, y: 62, active: false },
-    { name: "Themyscira", x: 60, y: 30, active: false },
-    { name: "Star City",  x: 18, y: 38, active: false },
-    { name: "Central",    x: 70, y: 50, active: false },
-  ];
-  return labels.map(l => (
-    <div key={l.name} style={{
-      position: "absolute", left: `${l.x}%`, top: `${l.y}%`,
-      transform: "translate(8px, -50%)",
-      fontFamily: "var(--font-ui)", fontSize: l.active ? 12 : 11,
-      color: l.active ? "#F0F0FF" : "#6B6B8A",
-      pointerEvents: "none", whiteSpace: "nowrap", zIndex: 4,
-      display: "inline-flex", alignItems: "center", gap: 6,
-      textShadow: "0 1px 2px rgba(0,0,0,0.7)",
-    }}>
-      {l.active && <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--krypton)", boxShadow: "0 0 6px var(--krypton-glow)" }}/>}
-      {l.name}
-    </div>
-  ));
-};
-
-// ── CHARACTER ICONS ─────────────────────────────────────────────────
-const CharactersLayer = ({ chars, activeChar, onSelect, previewArea }) => {
-  return chars.map(c => {
-    const isActive = c.id === activeChar;
-    const statusDot = c.status === "active" ? "#2DFF78" :
-                      c.status === "observing" ? "#C9A84C" :
-                      c.status === "deceased" ? "#3A3A55" : "#CC2200";
-    let inPreview = false;
-    if (previewArea) {
-      const dx = c.x - previewArea.x, dy = c.y - previewArea.y;
-      inPreview = Math.sqrt(dx*dx + dy*dy) < (previewArea.r / 8);
-    }
-    return (
-      <button key={c.id} onClick={(e) => { e.stopPropagation(); onSelect(c.id); }} style={{
-        position: "absolute", left: `${c.x}%`, top: `${c.y}%`,
-        transform: "translate(-50%, -50%)",
-        zIndex: isActive ? 10 : 6, background: "transparent", border: "none", padding: 0, cursor: "pointer",
-      }}>
-        <div style={{ position: "relative", width: 52, height: 52 }}>
-          {isActive && (
-            <div style={{
-              position: "absolute", inset: -6, borderRadius: "50%",
-              border: "1.5px solid var(--krypton)",
-              animation: "wpmRingPulse 2s ease-out infinite",
-            }}/>
-          )}
-          {inPreview && (
-            <div style={{
-              position: "absolute", inset: -4, borderRadius: "50%",
-              border: "1.5px solid var(--krypton)", boxShadow: "0 0 16px var(--krypton-glow)",
-            }}/>
-          )}
-          <div style={{
-            position: "absolute", inset: -8, borderRadius: "50%",
-            background: `radial-gradient(circle, rgba(${c.color},0.35) 0%, transparent 60%)`,
-            opacity: isActive ? 0.9 : 0.4, filter: "blur(4px)",
-          }}/>
-          <div style={{
-            position: "relative", width: 52, height: 52, borderRadius: "50%", overflow: "hidden",
-            border: `2px solid ${c.status === "deceased" ? "var(--text-dim)" : (isActive ? "var(--krypton)" : "var(--iron)")}`,
-            boxShadow: isActive ? "0 0 18px var(--krypton-glow)" : "0 4px 16px rgba(0,0,0,0.6)",
-            filter: c.status === "deceased" ? "grayscale(1) brightness(0.6)" : "none",
-            animation: "wpmCharIdle 2.4s ease-in-out infinite",
-            animationDelay: `${c.id.length * 200}ms`,
-          }}>
-            <img src={c.img} alt={c.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-              onError={(e) => { e.currentTarget.style.display = "none"; }}
-            />
-          </div>
-          <div style={{
-            position: "absolute", bottom: 0, right: 0,
-            width: 11, height: 11, borderRadius: "50%",
-            background: statusDot, border: "2px solid #04040A",
-            boxShadow: c.status === "active" ? `0 0 8px ${statusDot}` : "none",
-          }}/>
-        </div>
-        <div style={{
-          position: "absolute", top: 56, left: "50%", transform: "translateX(-50%)",
-          fontFamily: "var(--font-ui)", fontSize: 11, fontWeight: 500,
-          color: c.status === "deceased" ? "var(--text-dim)" : "#F0F0FF",
-          textShadow: "0 1px 3px rgba(0,0,0,0.9)", whiteSpace: "nowrap", letterSpacing: "0.02em",
-        }}>{c.name}</div>
-      </button>
-    );
-  });
-};
-
-// ── STAMP DETAIL CARD — visual upgrade ──────────────────────────────
-const StampDetailCard = ({ blob, onClose, onRemove }) => {
-  const blobRgb = blob.color;
-  const blobSolid = `rgb(${blobRgb})`;
-  const blobA = (a) => `rgba(${blobRgb},${a})`;
-  return (
-    <div style={{
-      position: "absolute", left: 88, top: 92, width: 268,
-      background: "rgba(8,8,16,0.95)", backdropFilter: "blur(16px)",
-      WebkitBackdropFilter: "blur(16px)",
-      border: `1px solid ${blobA(0.3)}`, borderLeft: `3px solid ${blobSolid}`,
-      borderRadius: 12, padding: "16px 18px", zIndex: 30,
-      boxShadow: `0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px ${blobA(0.15)}`,
-      fontFamily: "var(--font-ui)",
-    }}>
-      <div style={{ fontSize: 10, color: blobSolid, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 6 }}>
-        {blob.kind}
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: "50%",
-            background: blobA(0.85), display: "inline-flex", alignItems: "center", justifyContent: "center",
-            fontSize: 16, boxShadow: `0 0 14px ${blobA(0.6)}`,
-          }}>{blob.stamp}</div>
-          <div style={{ fontSize: 15, color: "var(--text-primary)", fontWeight: 600 }}>{blob.label}</div>
-        </div>
-        <button onClick={onClose} style={{
-          background: "transparent", border: "none", color: "var(--text-dim)",
-          cursor: "pointer", fontSize: 14, padding: 0, flexShrink: 0,
-        }}>✕</button>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 11 }}>
-        <Row label="Severity"><SeverityBar value={blob.severity} color={blobSolid}/></Row>
-        <Row label="Radius"><span style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{Math.round(blob.r * 1.5)}km</span></Row>
-        <Row label="Spreading">
-          <span style={{ color: blob.spreading ? "#2DFF78" : "var(--text-dim)", fontFamily: "var(--font-mono)" }}>
-            {blob.spreading ? "YES · +2%/hr" : "STATIC"}
-          </span>
-        </Row>
-      </div>
-      {blob.characters?.length > 0 && (
-        <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #1A1A2E" }}>
-          <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", letterSpacing: "0.18em", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: 8 }}>
-            Affected
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-            {blob.characters.map(name => (
-              <span key={name} style={{
-                fontSize: 11, padding: "2px 10px", borderRadius: 999,
-                background: blobA(0.08), color: blobSolid, border: `1px solid ${blobA(0.4)}`,
-              }}>{name}</span>
-            ))}
-          </div>
-          <div style={{ fontSize: 10, color: "var(--text-secondary)", fontFamily: "var(--font-mono)", lineHeight: 1.7 }}>
-            {blob.characters[0] && <div>{blob.characters[0]}: Guilt <span style={{ color: blobSolid }}>↑ 12%</span></div>}
-            {blob.characters[1] && <div>{blob.characters[1]}: Fear <span style={{ color: blobSolid }}>↑ 8%</span></div>}
-          </div>
-        </div>
-      )}
-      <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
-        <button style={btnStyle("ghost")}>Edit</button>
-        <button style={btnStyle("danger")} onClick={onRemove}>Remove</button>
-      </div>
-    </div>
-  );
-};
-
+// ── STAMP DETAIL CARD ────────────────────────────────────────────────
 const Row = ({ label, children }) => (
   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
     <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", letterSpacing: "0.18em", color: "var(--text-dim)", textTransform: "uppercase" }}>{label}</span>
@@ -766,11 +681,77 @@ const btnStyle = (kind) => ({
   borderRadius: 8, cursor: "pointer", transition: "all 160ms ease",
 });
 
-// ── PRESENCE STRIP ──────────────────────────────────────────────────
+const StampDetailCard = ({ blob, onClose, onRemove }) => {
+  const blobRgb = blob.color;
+  const blobSolid = `rgb(${blobRgb})`;
+  const blobA = (a) => `rgba(${blobRgb},${a})`;
+  return (
+    <div style={{
+      position: "absolute", left: 88, top: 92, width: 268,
+      background: "rgba(8,8,16,0.95)", backdropFilter: "blur(16px)",
+      WebkitBackdropFilter: "blur(16px)",
+      border: `1px solid ${blobA(0.3)}`, borderLeft: `3px solid ${blobSolid}`,
+      borderRadius: 12, padding: "16px 18px", zIndex: 30,
+      boxShadow: `0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px ${blobA(0.15)}`,
+      fontFamily: "var(--font-ui)",
+    }}>
+      <div style={{ fontSize: 10, color: blobSolid, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 6 }}>
+        {blob.kind}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: "50%",
+            background: blobA(0.85), display: "inline-flex", alignItems: "center", justifyContent: "center",
+            fontSize: 16, boxShadow: `0 0 14px ${blobA(0.6)}`,
+          }}>{blob.stamp}</div>
+          <div style={{ fontSize: 15, color: "var(--text-primary)", fontWeight: 600 }}>{blob.label}</div>
+        </div>
+        <button onClick={onClose} style={{ background: "transparent", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: 14, padding: 0 }}>✕</button>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 11 }}>
+        <Row label="Severity"><SeverityBar value={blob.severity} color={blobSolid}/></Row>
+        <Row label="Radius"><span style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{Math.round(blob.r * 1.5)}km</span></Row>
+        <Row label="Spreading">
+          <span style={{ color: blob.spreading ? "#2DFF78" : "var(--text-dim)", fontFamily: "var(--font-mono)" }}>
+            {blob.spreading ? "YES · +2%/hr" : "STATIC"}
+          </span>
+        </Row>
+      </div>
+      {blob.characters?.length > 0 && (
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #1A1A2E" }}>
+          <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", letterSpacing: "0.18em", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: 8 }}>
+            Affected
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+            {blob.characters.map(name => (
+              <span key={name} style={{
+                fontSize: 11, padding: "2px 10px", borderRadius: 999,
+                background: blobA(0.08), color: blobSolid, border: `1px solid ${blobA(0.4)}`,
+              }}>{name}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
+        <button style={btnStyle("ghost")}>Edit</button>
+        <button style={btnStyle("danger")} onClick={onRemove}>Remove</button>
+      </div>
+    </div>
+  );
+};
+
+// ── PRESENCE STRIP ───────────────────────────────────────────────────
 const PresenceStrip = ({ chars, activeChar, onSelect }) => {
   const cityMap = { kal: "Metropolis", bruce: "Gotham", diana: "Themyscira", lois: "Metropolis", jon: "Smallville" };
   return (
-    <div style={wpmStyles.presence}>
+    <div style={{
+      position: "absolute", left: 0, right: 0, bottom: 0, height: 86,
+      background: "linear-gradient(to top, rgba(4,4,10,0.96), rgba(4,4,10,0.5))",
+      backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+      borderTop: "1px solid var(--iron)", display: "flex", alignItems: "center",
+      gap: 0, padding: "0 22px 0 280px", overflowX: "auto", zIndex: 20,
+    }}>
       {chars.map(c => {
         const isActive = c.id === activeChar;
         const stateColor = c.state.includes("82") || c.state.includes("68") ? "#CC2200" :
@@ -791,8 +772,7 @@ const PresenceStrip = ({ chars, activeChar, onSelect }) => {
             <div style={{
               width: 40, height: 40, borderRadius: "50%", overflow: "hidden",
               border: `1.5px solid ${isActive ? "var(--krypton)" : "var(--iron)"}`,
-              filter: c.status === "deceased" ? "grayscale(1) brightness(0.6)" : "none",
-              flexShrink: 0,
+              filter: c.status === "deceased" ? "grayscale(1) brightness(0.6)" : "none", flexShrink: 0,
             }}>
               <img src={c.img} alt={c.name} style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
             </div>
@@ -814,40 +794,84 @@ const PresenceStrip = ({ chars, activeChar, onSelect }) => {
   );
 };
 
-// ── MAIN COMPONENT ──────────────────────────────────────────────────
+// ── MAIN COMPONENT ───────────────────────────────────────────────────
 const WorldMap = () => {
-  const [mapMode, setMapMode] = React.useState("pressure");
-  const [layers, setLayers] = React.useState(LAYERS_DATA);
+  const [mapMode, setMapMode]           = React.useState("pressure");
+  const [layers, setLayers]             = React.useState(LAYERS_DATA);
+  const [layerPanelOpen, setLayerPanelOpen] = React.useState(true);
+  const [leftTab, setLeftTab]           = React.useState("stamps");
   const [leftExpanded, setLeftExpanded] = React.useState(true);
-  const [tilt, setTilt] = React.useState(45);
-  const [zoom, setZoom] = React.useState(1);
-  const [showTrails, setShowTrails] = React.useState(true);
+  const [zoom, setZoom]                 = React.useState(0.55);
+  const [pan, setPan]                   = React.useState({ x: -200, y: -180 });
+  const [isPanning, setIsPanning]       = React.useState(false);
   const [selectedStamp, setSelectedStamp] = React.useState(null);
-  const [blobs, setBlobs] = React.useState(INITIAL_BLOBS);
-  const [selectedBlob, setSelectedBlob] = React.useState(INITIAL_BLOBS[3]);
-  const [activeChar, setActiveChar] = React.useState("kal");
-  const [cursorPos, setCursorPos] = React.useState(null);
-  const mapRef = React.useRef(null);
+  const [blobs, setBlobs]               = React.useState(INITIAL_BLOBS);
+  const [selectedBlob, setSelectedBlob] = React.useState(null);
+  const [activeChar, setActiveChar]     = React.useState("kal");
+  const [cursorPos, setCursorPos]       = React.useState(null);
+  const [characterPositions, setCharacterPositions] = React.useState(() => {
+    const init = {};
+    CHARACTERS_MAP.forEach(c => { init[c.id] = { col: c.col, row: c.row }; });
+    return init;
+  });
+  const [placedPieces, setPlacedPieces]     = React.useState([]);
+  const [highlightedTile, setHighlightedTile] = React.useState(null);
+  const [draggingCharId, setDraggingCharId]   = React.useState(null);
+  const [draggingPiece, setDraggingPiece]     = React.useState(null);
 
-  const activeLayers = layers.filter(l => l.active);
-  const traumaActive = layers.find(l => l.id === "trauma")?.active;
+  const mapOuterRef = React.useRef(null);
+  const panRef = React.useRef({ active: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 });
 
-  const handleLayerToggle = React.useCallback((layerId, active) => {
-    setLayers(prev => prev.map(l => l.id === layerId ? { ...l, active } : l));
+  // Wheel zoom
+  React.useEffect(() => {
+    const el = mapOuterRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      e.preventDefault();
+      setZoom(z => Math.min(2.5, Math.max(0.2, z - e.deltaY * 0.0008)));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  const handleMapMouseMove = (e) => {
-    if (!selectedStamp || !mapRef.current) return;
-    const rect = mapRef.current.getBoundingClientRect();
-    setCursorPos({
-      x: ((e.clientX - rect.left) / rect.width) * 100,
-      y: ((e.clientY - rect.top) / rect.height) * 100,
-    });
+  const activeLayers = layers.filter(l => l.active);
+
+  const handleLayerToggle = React.useCallback((id, active) => {
+    setLayers(prev => prev.map(l => l.id === id ? { ...l, active } : l));
+  }, []);
+
+  // Pan handlers
+  const handlePanStart = (e) => {
+    if (e.button !== 0 || selectedStamp) return;
+    if (e.target.closest('[draggable="true"]')) return;
+    panRef.current = { active: true, startX: e.clientX, startY: e.clientY, startPanX: pan.x, startPanY: pan.y };
+    setIsPanning(true);
+  };
+
+  const handlePanMove = (e) => {
+    if (panRef.current.active) {
+      setPan({
+        x: panRef.current.startPanX + (e.clientX - panRef.current.startX),
+        y: panRef.current.startPanY + (e.clientY - panRef.current.startY),
+      });
+    }
+    if (selectedStamp && mapOuterRef.current) {
+      const rect = mapOuterRef.current.getBoundingClientRect();
+      setCursorPos({
+        x: ((e.clientX - rect.left) / rect.width) * 100,
+        y: ((e.clientY - rect.top) / rect.height) * 100,
+      });
+    }
+  };
+
+  const handlePanEnd = () => {
+    panRef.current.active = false;
+    setIsPanning(false);
   };
 
   const handleMapClick = (e) => {
-    if (!selectedStamp || !mapRef.current) return;
-    const rect = mapRef.current.getBoundingClientRect();
+    if (!selectedStamp || !mapOuterRef.current) return;
+    const rect = mapOuterRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     const newBlob = {
@@ -864,135 +888,217 @@ const WorldMap = () => {
     setCursorPos(null);
   };
 
-  const removeBlob = (id) => {
-    setBlobs(b => b.filter(x => x.id !== id));
-    setSelectedBlob(null);
-  };
+  const handleTileDrop = React.useCallback((tile) => {
+    if (draggingCharId) {
+      setCharacterPositions(prev => ({ ...prev, [draggingCharId]: tile }));
+      setDraggingCharId(null);
+    } else if (draggingPiece) {
+      setPlacedPieces(prev => [...prev, { ...draggingPiece, col: tile.col, row: tile.row, instanceId: Date.now() }]);
+      setDraggingPiece(null);
+    }
+    setHighlightedTile(null);
+  }, [draggingCharId, draggingPiece]);
+
+  const removeBlob = (id) => { setBlobs(b => b.filter(x => x.id !== id)); setSelectedBlob(null); };
+
+  // Left panel style
+  const leftPanelWidth = leftExpanded ? 272 : 64;
 
   return (
-    <div style={wpmStyles.root}>
-      {/* Animation keyframes */}
-      <style>{`
-        @keyframes wpmRingPulse {
-          0%   { transform: scale(0.85); opacity: 1; }
-          100% { transform: scale(1.6);  opacity: 0; }
-        }
-        @keyframes wpmCharIdle {
-          0%, 100% { transform: scale(1); }
-          50%      { transform: scale(1.04); }
-        }
-        @keyframes blobBreath {
-          from { transform: translate(-50%, -50%) scale(0.97); opacity: 0.85; }
-          to   { transform: translate(-50%, -50%) scale(1.03); opacity: 1;    }
-        }
-        @keyframes layerFadeIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        .wpm-blob-conflict { animation-duration: 1.6s !important; }
-        .wpm-blob-bio      { animation-duration: 4s !important;   }
-        .wpm-blob-trauma   { animation-duration: 6s !important;   }
-      `}</style>
+    <div style={{ flex: 1, height: "100vh", position: "relative", overflow: "hidden", background: "#04040A", fontFamily: "var(--font-ui)" }}>
+      <style>{animCSS}</style>
 
-      {/* MAP CANVAS */}
-      <div style={wpmStyles.mapWrap}>
-        <div
-          ref={mapRef}
-          style={{
-            ...wpmStyles.mapTilted,
-            transform: `rotateX(${tilt}deg) scale(${zoom})`,
-            cursor: selectedStamp ? "crosshair" : "grab",
-          }}
-          onMouseMove={handleMapMouseMove}
-          onMouseLeave={() => setCursorPos(null)}
-          onClick={handleMapClick}
-        >
-          {/* Dark satellite base */}
-          <MapBase mapMode={mapMode} activeLayers={activeLayers} />
-
-          {/* Per-layer elliptical tint overlays */}
-          {activeLayers.map(layer => <LayerMapOverlay key={layer.id} layer={layer} />)}
-
-          {/* Glowing pressure blobs — pressure mode only */}
-          {mapMode === "pressure" && (
-            <PressureBlobsLayer
-              blobs={blobs}
-              selectedId={selectedBlob?.id}
-              onSelect={(b) => { setSelectedBlob(b); setSelectedStamp(null); }}
-            />
-          )}
-
-          {/* Trauma memory stain */}
-          {traumaActive && <TraumaMemoryStain />}
-
-          <CityLabels />
-          {showTrails && <TrailsLayer activeChar={activeChar} />}
-          <CharactersLayer
-            chars={CHARACTERS_MAP}
-            activeChar={activeChar}
-            onSelect={setActiveChar}
-            previewArea={selectedStamp && cursorPos ? { ...cursorPos, r: selectedStamp.radius || 120 } : null}
-          />
-
-          {/* Stamp emoji icons + placement preview */}
-          <PressureIconsSVG blobs={blobs} cursorPos={cursorPos} previewStamp={selectedStamp} />
-
-          {/* Vignette */}
+      {/* PAN/ZOOM OUTER */}
+      <div
+        ref={mapOuterRef}
+        style={{
+          position: "absolute", inset: 0, overflow: "hidden",
+          cursor: selectedStamp ? "crosshair" : isPanning ? "grabbing" : "grab",
+        }}
+        onMouseDown={handlePanStart}
+        onMouseMove={handlePanMove}
+        onMouseUp={handlePanEnd}
+        onMouseLeave={handlePanEnd}
+        onClick={handleMapClick}
+        onDragEnd={() => { setDraggingCharId(null); setDraggingPiece(null); setHighlightedTile(null); }}
+      >
+        {/* PAN/ZOOM TRANSFORM */}
+        <div style={{
+          position: "absolute", left: "50%", top: "45%",
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          transformOrigin: "0 0",
+        }}>
+          {/* ISOMETRIC ROTATION */}
           <div style={{
-            position: "absolute", inset: 0, pointerEvents: "none", zIndex: 10,
-            background: "radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(0,0,0,0.6) 100%)",
-          }}/>
-          {/* Film grain */}
-          <div style={{
-            position: "absolute", inset: 0, pointerEvents: "none", zIndex: 11, opacity: 0.03,
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          }}/>
+            transform: "rotateX(52deg) rotateZ(-45deg)",
+            transformStyle: "preserve-3d",
+            transformOrigin: "center center",
+          }}>
+            {/* FLAT TILE PLANE */}
+            <div style={{
+              position: "relative",
+              width: GRID_SIZE * TILE_W,
+              height: GRID_SIZE * TILE_H,
+              transformStyle: "preserve-3d",
+            }}>
+              {/* TILES */}
+              {Array.from({ length: GRID_SIZE }, (_, r) =>
+                Array.from({ length: GRID_SIZE }, (_, c) => {
+                  const terrain = getTerrain(c, r);
+                  const t = TERRAIN_COLORS[terrain];
+                  const isHl = highlightedTile?.col === c && highlightedTile?.row === r;
+                  return (
+                    <div
+                      key={`${c}-${r}`}
+                      style={{
+                        position: "absolute", left: c * TILE_W, top: r * TILE_H,
+                        width: TILE_W, height: TILE_H,
+                        background: isHl ? "rgba(0,212,170,0.22)" : t.fill,
+                        border: `1px solid ${isHl ? "rgba(0,212,170,0.65)" : t.border}`,
+                        boxSizing: "border-box",
+                        transition: "background 0.08s ease, border-color 0.08s ease",
+                      }}
+                      onMouseEnter={() => { if (!selectedStamp) setHighlightedTile({ col: c, row: r }); }}
+                      onMouseLeave={() => setHighlightedTile(null)}
+                      onDragOver={(e) => { e.preventDefault(); setHighlightedTile({ col: c, row: r }); }}
+                      onDrop={(e) => { e.preventDefault(); handleTileDrop({ col: c, row: r }); }}
+                    />
+                  );
+                })
+              )}
+
+              {/* PLACED PIECES */}
+              {placedPieces.map(piece => (
+                <PlacedPiece key={piece.instanceId} piece={piece} col={piece.col} row={piece.row} />
+              ))}
+
+              {/* CHARACTER ICONS */}
+              {CHARACTERS_MAP.map(c => {
+                const pos = characterPositions[c.id] || { col: c.col, row: c.row };
+                return (
+                  <FloatingCharacterIcon
+                    key={c.id}
+                    char={c}
+                    col={pos.col}
+                    row={pos.row}
+                    isActive={c.id === activeChar}
+                    onSelect={() => setActiveChar(c.id)}
+                    onDragStart={() => setDraggingCharId(c.id)}
+                  />
+                );
+              })}
+            </div>
+          </div>
         </div>
+
+        {/* SCREEN-SPACE OVERLAYS */}
+        {activeLayers.map(layer => <LayerMapOverlay key={layer.id} layer={layer} />)}
+
+        {mapMode === "pressure" && (
+          <PressureBlobsLayer
+            blobs={blobs}
+            selectedId={selectedBlob?.id}
+            onSelect={(b) => { setSelectedBlob(b); setSelectedStamp(null); }}
+          />
+        )}
+
+        <PressureIconsSVG blobs={mapMode === "pressure" ? blobs : []} cursorPos={cursorPos} previewStamp={selectedStamp} />
+
+        {/* Vignette */}
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 10,
+          background: "radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(0,0,0,0.65) 100%)",
+        }}/>
+        {/* Film grain */}
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 11, opacity: 0.025,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+        }}/>
       </div>
 
-      {/* LEFT STAMP PANEL */}
+      {/* LEFT PANEL */}
       <div
-        style={wpmStyles.leftPanel(leftExpanded)}
+        style={{
+          position: "absolute", top: 0, bottom: 0, left: 0,
+          width: leftPanelWidth,
+          background: "rgba(8,8,16,0.92)", backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)", borderRight: "1px solid var(--iron)",
+          zIndex: 40, transition: "width 220ms cubic-bezier(0.4,0,0.2,1)",
+          display: "flex", flexDirection: "column", overflow: "hidden",
+        }}
         onMouseEnter={() => setLeftExpanded(true)}
         onMouseLeave={() => setLeftExpanded(false)}
       >
-        {leftExpanded && (
-          <div style={wpmStyles.leftHeader}>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--krypton)", letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: 6 }}>
-              World Events
-            </div>
-            <div style={{ fontSize: 11, color: "var(--text-dim)", lineHeight: 1.5 }}>
-              Stamp events onto the world. Characters will react.
-            </div>
-          </div>
-        )}
-        <div style={wpmStyles.leftBody}>
-          {STAMP_CATEGORIES.map(cat => (
-            <StampSection key={cat.id} cat={cat} expanded={leftExpanded}
-              selectedId={selectedStamp?.id} onSelect={setSelectedStamp}/>
+        {/* Tabs */}
+        <div style={{ display: "flex", borderBottom: "1px solid var(--iron)", flexShrink: 0 }}>
+          {[{ id: "stamps", label: "EVENTS", icon: "⚡" }, { id: "pieces", label: "PIECES", icon: "🧩" }].map(tab => (
+            <button key={tab.id} onClick={() => setLeftTab(tab.id)} style={{
+              flex: 1, padding: "12px 4px", background: "transparent",
+              border: "none", borderBottom: `2px solid ${leftTab === tab.id ? "var(--krypton)" : "transparent"}`,
+              color: leftTab === tab.id ? "var(--krypton)" : "var(--text-dim)",
+              fontFamily: "var(--font-mono)", fontSize: leftExpanded ? 9 : 14,
+              letterSpacing: leftExpanded ? "0.15em" : 0,
+              textTransform: "uppercase", cursor: "pointer", transition: "all 0.15s ease",
+            }}>
+              {leftExpanded ? tab.label : tab.icon}
+            </button>
           ))}
-          {leftExpanded && (
-            <div style={{ padding: "10px 14px 4px" }}>
-              <button style={{
-                width: "100%", padding: "10px 12px", background: "transparent",
-                border: "1px dashed var(--iron)", borderRadius: 8,
-                color: "var(--text-secondary)", fontSize: 11, fontFamily: "var(--font-ui)",
-                letterSpacing: "0.04em", cursor: "pointer", transition: "all 160ms ease",
-              }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--krypton)"; e.currentTarget.style.color = "var(--krypton)"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--iron)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
-              >+ Make your own event</button>
-            </div>
+        </div>
+
+        {/* Tab body */}
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+          {leftTab === "stamps" ? (
+            <>
+              {STAMP_CATEGORIES.map(cat => (
+                <StampSection key={cat.id} cat={cat} expanded={leftExpanded}
+                  selectedId={selectedStamp?.id} onSelect={setSelectedStamp}/>
+              ))}
+              {leftExpanded && (
+                <div style={{ padding: "10px 14px 4px" }}>
+                  <button style={{
+                    width: "100%", padding: "10px 12px", background: "transparent",
+                    border: "1px dashed var(--iron)", borderRadius: 8,
+                    color: "var(--text-secondary)", fontSize: 11, fontFamily: "var(--font-ui)",
+                    letterSpacing: "0.04em", cursor: "pointer", transition: "all 160ms ease",
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--krypton)"; e.currentTarget.style.color = "var(--krypton)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--iron)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+                  >+ Make your own event</button>
+                </div>
+              )}
+            </>
+          ) : (
+            leftExpanded
+              ? <PieceLibrary onDragStart={setDraggingPiece} />
+              : (
+                <div style={{ padding: "16px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                  {["⛰️", "🏙️", "⚛️", "🛣️"].map((icon, i) => (
+                    <span key={i} style={{ fontSize: 18 }}>{icon}</span>
+                  ))}
+                </div>
+              )
           )}
         </div>
       </div>
 
-      {/* BUILD WORLD + COMPASS */}
-      <button style={wpmStyles.buildBtn}
-        onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,212,170,0.08)"; e.currentTarget.style.boxShadow = "0 0 24px var(--krypton-glow)"; }}
-        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.boxShadow = "none"; }}
-      >⬡ Build world</button>
-      <div style={wpmStyles.compass}>
+      {/* LAYER PANEL */}
+      <LayerPanel
+        layers={layers} onToggle={handleLayerToggle}
+        mapMode={mapMode} onModeChange={setMapMode}
+        open={layerPanelOpen} onToggleOpen={() => setLayerPanelOpen(o => !o)}
+      />
+
+      {/* ZOOM CONTROLS */}
+      <ZoomControls zoom={zoom} onZoom={setZoom} onReset={() => { setZoom(0.55); setPan({ x: -200, y: -180 }); }} />
+
+      {/* COMPASS */}
+      <div style={{
+        position: "absolute", top: 18, right: 288, width: 44, height: 44,
+        background: "rgba(15,15,26,0.85)", backdropFilter: "blur(8px)",
+        border: "1px solid var(--iron)", borderRadius: "50%", zIndex: 25,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontFamily: "var(--font-mono)", fontSize: 10,
+      }}>
         <div style={{ position: "relative", width: 26, height: 26 }}>
           <div style={{ position: "absolute", left: "50%", top: 2, transform: "translateX(-50%)", color: "var(--krypton)", fontSize: 9, fontWeight: 600 }}>N</div>
           <div style={{ position: "absolute", left: "50%", top: "50%", width: 1, height: 12, background: "linear-gradient(to bottom, var(--krypton), transparent)", transform: "translateX(-50%) translateY(-100%)" }}/>
@@ -1000,25 +1106,12 @@ const WorldMap = () => {
         </div>
       </div>
 
-      {/* LAYER PANEL — top right */}
-      <LayerPanel layers={layers} onToggle={handleLayerToggle} mapMode={mapMode} onModeChange={setMapMode} />
-
-      {/* MAP CONTROLS */}
-      <div style={wpmStyles.controls}>
-        <button style={wpmStyles.controlBtn(false)} onClick={() => setZoom(z => Math.min(2, z + 0.15))} title="Zoom in">+</button>
-        <button style={wpmStyles.controlBtn(false)} onClick={() => setZoom(z => Math.max(0.6, z - 0.15))} title="Zoom out">−</button>
-        <button style={wpmStyles.controlBtn(tilt === 60)} onClick={() => setTilt(60)} title="Dramatic tilt">↗</button>
-        <button style={wpmStyles.controlBtn(tilt === 0)} onClick={() => setTilt(0)} title="Flatten">⤢</button>
-        <button style={wpmStyles.controlBtn(false)} onClick={() => { setTilt(45); setZoom(1); }} title="Reset">◎</button>
-        <button style={wpmStyles.controlBtn(showTrails)} onClick={() => setShowTrails(s => !s)} title="Toggle trails">↝</button>
-      </div>
-
       {/* STAMP DETAIL */}
       {selectedBlob && (
         <StampDetailCard blob={selectedBlob} onClose={() => setSelectedBlob(null)} onRemove={() => removeBlob(selectedBlob.id)} />
       )}
 
-      {/* CHARACTER PRESENCE STRIP */}
+      {/* PRESENCE STRIP */}
       <PresenceStrip chars={CHARACTERS_MAP} activeChar={activeChar} onSelect={setActiveChar} />
 
       {/* STAMP PLACEMENT LABEL */}
