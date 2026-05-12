@@ -342,7 +342,12 @@ const SpotifyEmbed = () => {
 
   return (
     <div style={{ marginBottom: 22 }}>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-ghost)", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 10 }}>Playlist</div>
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--krypton)", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4 }}>Musical Psyche</div>
+        <div style={{ fontFamily: "var(--font-body)", fontSize: 11, fontStyle: "italic", color: "var(--text-dim)", lineHeight: 1.55 }}>
+          Lyrics, emotion, and sonic texture from this playlist shape the character's inner world — feeding the most accurate psyche and feats possible.
+        </div>
+      </div>
       {!playlistId ? (
         <div>
           <div style={{ display: "flex", gap: 6 }}>
@@ -373,8 +378,8 @@ const SpotifyEmbed = () => {
           />
           <button
             onClick={() => { setPlaylistId(null); setInput(''); }}
-            style={{ marginTop: 6, background: "none", border: "none", color: "var(--text-ghost)", fontSize: 11, cursor: "pointer", fontFamily: "var(--font-mono)" }}
-          >change playlist</button>
+            style={{ marginTop: 8, background: "none", border: "1px solid var(--iron)", borderRadius: 7, padding: "5px 13px", color: "var(--text-dim)", fontSize: 11, cursor: "pointer", fontFamily: "var(--font-mono)", display: "inline-block" }}
+          >Customize playlist</button>
         </div>
       )}
     </div>
