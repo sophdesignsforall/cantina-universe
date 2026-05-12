@@ -2,7 +2,9 @@
 // UI component lives in character-forge.jsx as SpotifySection
 
 const SPOTIFY_CLIENT_ID = 'cc8586818bbc4cecba46b5686a81f79a';
-const REDIRECT_URI = window.location.origin + window.location.pathname.replace(/\/$/, '');
+const REDIRECT_URI = window.location.hostname === 'localhost'
+  ? 'http://localhost:3000'
+  : 'https://cantina-universe.vercel.app';
 const SCOPES = [
   'playlist-read-private',
   'playlist-read-collaborative',
