@@ -345,7 +345,7 @@ const SpotifyEmbed = () => {
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--krypton)", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4 }}>Musical Psyche</div>
         <div style={{ fontFamily: "var(--font-body)", fontSize: 11, fontStyle: "italic", color: "var(--text-dim)", lineHeight: 1.55 }}>
-          Lyrics, emotion, and sonic texture from this playlist shape the character's inner world — feeding the most accurate psyche and feats possible.
+          Lyrics, emotion, and sonic texture from this playlist shape the character's psyche.
         </div>
       </div>
       {!playlistId ? (
@@ -386,22 +386,130 @@ const SpotifyEmbed = () => {
   );
 };
 
-const TypologyCards = () => (
+// ── Archetype signatures (Scott Jeffrey / Jungian list) ─────────────────────
+const ARCHETYPES = [
+  { name: "The Hero",          sig: { empathy:75, sacrifice:85, psychopathy:15, shadow:30, ambition:60, moralRigidity:70, loyalty:80, volatility:35 } },
+  { name: "The Warrior",       sig: { ambition:80, sacrifice:75, psychopathy:40, shadow:40, empathy:50, moralRigidity:65, loyalty:75, volatility:55 } },
+  { name: "The Sage",          sig: { moralRigidity:75, shadow:35, psychopathy:10, loyalty:70, empathy:65, ambition:30, sacrifice:60, volatility:15 } },
+  { name: "The Magician",      sig: { shadow:70, ambition:75, psychopathy:35, empathy:55, moralRigidity:45, loyalty:50, sacrifice:55, volatility:50 } },
+  { name: "The Trickster",     sig: { volatility:75, moralRigidity:20, psychopathy:55, empathy:45, ambition:60, shadow:60, loyalty:30, sacrifice:25 } },
+  { name: "The Ruler",         sig: { ambition:85, moralRigidity:70, psychopathy:45, empathy:30, loyalty:60, shadow:30, sacrifice:40, volatility:30 } },
+  { name: "The Caregiver",     sig: { empathy:90, sacrifice:85, psychopathy:5,  moralRigidity:65, loyalty:80, ambition:25, shadow:25, volatility:20 } },
+  { name: "The Creator",       sig: { shadow:65, ambition:65, psychopathy:20, empathy:60, moralRigidity:35, loyalty:45, sacrifice:50, volatility:45 } },
+  { name: "The Rebel",         sig: { volatility:70, moralRigidity:15, ambition:70, psychopathy:50, empathy:40, loyalty:25, shadow:55, sacrifice:35 } },
+  { name: "The Lover",         sig: { empathy:85, psychopathy:10, moralRigidity:35, volatility:50, loyalty:75, shadow:45, ambition:40, sacrifice:60 } },
+  { name: "The Martyr",        sig: { sacrifice:95, empathy:80, psychopathy:5,  moralRigidity:75, loyalty:85, shadow:50, ambition:30, volatility:25 } },
+  { name: "The Tyrant",        sig: { psychopathy:90, ambition:90, empathy:5,  moralRigidity:20, loyalty:20, shadow:65, sacrifice:10, volatility:75 } },
+  { name: "The Shapeshifter",  sig: { shadow:80, volatility:70, moralRigidity:30, empathy:50, ambition:55, psychopathy:40, loyalty:30, sacrifice:40 } },
+  { name: "The Innocent",      sig: { psychopathy:5,  shadow:10, ambition:25, empathy:80, moralRigidity:60, loyalty:70, sacrifice:50, volatility:15 } },
+  { name: "The Seeker",        sig: { shadow:55, ambition:55, loyalty:35, moralRigidity:40, empathy:55, psychopathy:25, sacrifice:45, volatility:50 } },
+  { name: "The Destroyer",     sig: { psychopathy:80, volatility:80, empathy:10, loyalty:15, moralRigidity:15, ambition:65, shadow:70, sacrifice:15 } },
+  { name: "The Mystic",        sig: { shadow:75, ambition:20, psychopathy:15, volatility:15, empathy:70, moralRigidity:55, loyalty:60, sacrifice:65 } },
+  { name: "The Wanderer",      sig: { shadow:60, loyalty:20, ambition:45, moralRigidity:35, empathy:50, psychopathy:30, sacrifice:35, volatility:55 } },
+  { name: "The Visionary",     sig: { ambition:80, shadow:65, moralRigidity:50, empathy:60, psychopathy:30, loyalty:55, sacrifice:60, volatility:45 } },
+  { name: "The Mentor",        sig: { loyalty:85, empathy:75, moralRigidity:70, ambition:25, psychopathy:10, shadow:30, sacrifice:70, volatility:10 } },
+  { name: "The Orphan",        sig: { shadow:50, loyalty:45, empathy:65, ambition:35, moralRigidity:45, psychopathy:20, sacrifice:50, volatility:40 } },
+  { name: "The Jester",        sig: { volatility:65, moralRigidity:20, ambition:50, empathy:60, psychopathy:35, shadow:40, loyalty:45, sacrifice:30 } },
+  { name: "The Perfectionist", sig: { moralRigidity:90, psychopathy:10, shadow:45, empathy:55, ambition:60, loyalty:65, sacrifice:65, volatility:25 } },
+  { name: "The Outlaw",        sig: { moralRigidity:10, psychopathy:60, volatility:75, ambition:70, loyalty:20, shadow:65, empathy:30, sacrifice:20 } },
+  { name: "The Survivor",      sig: { sacrifice:70, loyalty:60, shadow:65, volatility:55, empathy:55, ambition:50, moralRigidity:45, psychopathy:30 } },
+  { name: "The Patriarch",     sig: { loyalty:90, moralRigidity:85, ambition:55, empathy:50, psychopathy:20, shadow:35, sacrifice:75, volatility:20 } },
+  { name: "The Prophet",       sig: { moralRigidity:80, shadow:60, empathy:65, ambition:50, psychopathy:15, loyalty:60, sacrifice:70, volatility:30 } },
+  { name: "The Judge",         sig: { moralRigidity:95, psychopathy:25, empathy:40, shadow:50, ambition:55, loyalty:60, sacrifice:45, volatility:20 } },
+  { name: "The Threshold Guardian", sig: { moralRigidity:75, loyalty:80, psychopathy:30, shadow:55, empathy:45, ambition:40, sacrifice:65, volatility:35 } },
+];
+
+const computeArchetype = (matrix) => {
+  let best = null, bestDist = Infinity;
+  ARCHETYPES.forEach(arch => {
+    const dist = Math.sqrt(Object.keys(arch.sig).reduce((sum, k) => sum + Math.pow((matrix[k] || 0) - arch.sig[k], 2), 0));
+    if (dist < bestDist) { bestDist = dist; best = arch; }
+  });
+  return best || ARCHETYPES[0];
+};
+
+// ── Dynamic MBTI ─────────────────────────────────────────────────────────────
+const MBTI_INFO = {
+  INTJ: { name: "The Architect",    desc: "Long-term vision, private purpose." },
+  INTP: { name: "The Logician",     desc: "Unravels problems, not people." },
+  ENTJ: { name: "The Commander",    desc: "Demands results. No exceptions." },
+  ENTP: { name: "The Debater",      desc: "Argues every angle to find truth." },
+  INFJ: { name: "The Advocate",     desc: "Idealist with private depths. Reads people too well." },
+  INFP: { name: "The Mediator",     desc: "Fights for what should be, not what is." },
+  ENFJ: { name: "The Protagonist",  desc: "Shapes others. Often at their own cost." },
+  ENFP: { name: "The Campaigner",   desc: "Infectious vision. Exhausting intimacy." },
+  ISTJ: { name: "The Logistician",  desc: "Duty before desire. Always." },
+  ISFJ: { name: "The Defender",     desc: "Quietly absorbs the world's weight." },
+  ESTJ: { name: "The Executive",    desc: "Rules exist. So do consequences." },
+  ESFJ: { name: "The Consul",       desc: "Harmony maintained at personal cost." },
+  ISTP: { name: "The Virtuoso",     desc: "Acts. Explains later." },
+  ISFP: { name: "The Adventurer",   desc: "Feels everything. Shows nothing." },
+  ESTP: { name: "The Entrepreneur", desc: "Thrives in the fire." },
+  ESFP: { name: "The Entertainer",  desc: "The room needs them. They know it." },
+};
+
+const computeMBTI = (m) => {
+  const E = (m.ambition - m.shadow + 100) / 2;
+  const N = (100 - m.moralRigidity) * 0.4 + m.empathy * 0.3 + m.shadow * 0.3;
+  const F = (m.empathy - m.psychopathy + 100) / 2;
+  const J = m.moralRigidity * 0.5 + m.loyalty * 0.3 + (100 - m.volatility) * 0.2;
+  return (E > 50 ? 'E' : 'I') + (N > 50 ? 'N' : 'S') + (F > 50 ? 'F' : 'T') + (J > 50 ? 'J' : 'P');
+};
+
+// ── Dynamic Enneagram ─────────────────────────────────────────────────────────
+const ENNEA_INFO = [
+  null,
+  { name: "The Perfectionist", desc: "Principled, purposeful, self-controlled.",    wings: [9, 2] },
+  { name: "The Giver",         desc: "Love is the instrument. Help is the need.",   wings: [1, 3] },
+  { name: "The Achiever",      desc: "Image is armor. Success is survival.",        wings: [2, 4] },
+  { name: "The Individualist", desc: "Identity built from what is missing.",        wings: [3, 5] },
+  { name: "The Observer",      desc: "Watches the world. Rarely enters it.",        wings: [4, 6] },
+  { name: "The Loyalist",      desc: "Trust earned in decades, lost in seconds.",   wings: [5, 7] },
+  { name: "The Enthusiast",    desc: "The future is always brighter ahead.",        wings: [6, 8] },
+  { name: "The Challenger",    desc: "Power claimed, never asked for.",             wings: [7, 9] },
+  { name: "The Peacemaker",    desc: "Conflict avoided at the cost of self.",       wings: [8, 1] },
+];
+
+const computeEnneagram = (m) => {
+  const scores = [
+    0,
+    m.moralRigidity * 0.5 + (100 - m.psychopathy) * 0.3 + m.empathy * 0.2,
+    m.empathy * 0.4 + m.sacrifice * 0.4 + (100 - m.psychopathy) * 0.2,
+    m.ambition * 0.5 + (100 - m.shadow) * 0.3 + m.loyalty * 0.2,
+    m.shadow * 0.4 + m.empathy * 0.4 + (100 - m.moralRigidity) * 0.2,
+    (100 - m.empathy) * 0.3 + m.shadow * 0.4 + (100 - m.ambition) * 0.3,
+    m.loyalty * 0.5 + m.moralRigidity * 0.3 + (100 - m.psychopathy) * 0.2,
+    m.ambition * 0.4 + (100 - m.sacrifice) * 0.3 + (100 - m.moralRigidity) * 0.3,
+    m.psychopathy * 0.3 + m.ambition * 0.4 + m.volatility * 0.3,
+    (100 - m.volatility) * 0.4 + (100 - m.ambition) * 0.3 + (100 - m.psychopathy) * 0.3,
+  ];
+  const type = scores.reduce((best, s, i) => i > 0 && s > scores[best] ? i : best, 1);
+  const [w1, w2] = ENNEA_INFO[type].wings;
+  const wing = scores[w1] >= scores[w2] ? w1 : w2;
+  return { type, wing, ...ENNEA_INFO[type] };
+};
+
+const TypologyCards = ({ matrix }) => {
+  const mbti = computeMBTI(matrix);
+  const mbtiInfo = MBTI_INFO[mbti] || { name: "Unknown", desc: "" };
+  const ennea = computeEnneagram(matrix);
+  return (
   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
     <div style={{ background: "var(--obsidian)", border: "1px solid rgba(245,158,11,0.4)", borderRadius: 16, padding: "18px 20px" }}>
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-dim)", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4 }}>Enneagram</div>
-      <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 38, color: "var(--gold)", letterSpacing: "0.04em", lineHeight: 1 }}>2w1</div>
-      <div style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--text-primary)", marginTop: 8, fontWeight: 500 }}>The Servant with a Conscience</div>
-      <div style={{ fontFamily: "var(--font-body)", fontSize: 12, fontStyle: "italic", color: "var(--text-secondary)", marginTop: 4 }}>Core fear: being unloved for who he truly is.</div>
+      <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 38, color: "var(--gold)", letterSpacing: "0.04em", lineHeight: 1 }}>{ennea.type}w{ennea.wing}</div>
+      <div style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--text-primary)", marginTop: 8, fontWeight: 500 }}>{ennea.name}</div>
+      <div style={{ fontFamily: "var(--font-body)", fontSize: 12, fontStyle: "italic", color: "var(--text-secondary)", marginTop: 4 }}>{ennea.desc}</div>
     </div>
     <div style={{ background: "var(--obsidian)", border: "1px solid var(--krypton-dim)", borderRadius: 16, padding: "18px 20px" }}>
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-dim)", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4 }}>MBTI</div>
-      <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 38, color: "var(--krypton)", letterSpacing: "0.04em", lineHeight: 1 }}>INFJ</div>
-      <div style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--text-primary)", marginTop: 8, fontWeight: 500 }}>The Advocate</div>
-      <div style={{ fontFamily: "var(--font-body)", fontSize: 12, fontStyle: "italic", color: "var(--text-secondary)", marginTop: 4 }}>Idealist with private depths. Reads people too well.</div>
+      <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 38, color: "var(--krypton)", letterSpacing: "0.04em", lineHeight: 1 }}>{mbti}</div>
+      <div style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--text-primary)", marginTop: 8, fontWeight: 500 }}>{mbtiInfo.name}</div>
+      <div style={{ fontFamily: "var(--font-body)", fontSize: 12, fontStyle: "italic", color: "var(--text-secondary)", marginTop: 4 }}>{mbtiInfo.desc}</div>
     </div>
   </div>
 );
+};
 
 const CharacterForge = () => {
   const [matrix, setMatrix] = React.useState(() =>
@@ -529,11 +637,11 @@ const CharacterForge = () => {
 
           <PersonalityRadar matrix={matrix}/>
 
-          <TypologyCards/>
+          <TypologyCards matrix={matrix}/>
 
           <div>
             <span className="pill krypton" style={{ fontFamily: "var(--font-display)", fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", padding: "8px 16px" }}>
-              The Burdened Savior
+              {computeArchetype(matrix).name}
             </span>
           </div>
 
