@@ -9,11 +9,11 @@ const TILE_H = 60;
 const seeded = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
 const TERRAIN_COLORS = {
-  plains: { fill: "#0D1A10", border: "rgba(45,255,120,0.1)"   },
-  hills:  { fill: "#14110A", border: "rgba(201,168,76,0.12)"  },
-  water:  { fill: "#060D18", border: "rgba(0,160,255,0.18)"   },
-  forest: { fill: "#091510", border: "rgba(30,180,70,0.15)"   },
-  urban:  { fill: "#0C0C1C", border: "rgba(160,160,255,0.15)" },
+  plains: { fill: "#1C3A22", border: "rgba(45,255,120,0.45)"   },
+  hills:  { fill: "#332612", border: "rgba(201,168,76,0.5)"    },
+  water:  { fill: "#0A1E3A", border: "rgba(0,160,255,0.55)"    },
+  forest: { fill: "#0E2810", border: "rgba(30,200,80,0.5)"     },
+  urban:  { fill: "#1A1A30", border: "rgba(160,160,255,0.45)"  },
 };
 
 const TERRAIN_MAP = Array.from({ length: GRID_SIZE }, (_, r) =>
@@ -801,8 +801,8 @@ const WorldMap = () => {
   const [layerPanelOpen, setLayerPanelOpen] = React.useState(true);
   const [leftTab, setLeftTab]           = React.useState("stamps");
   const [leftExpanded, setLeftExpanded] = React.useState(true);
-  const [zoom, setZoom]                 = React.useState(0.55);
-  const [pan, setPan]                   = React.useState({ x: -200, y: -180 });
+  const [zoom, setZoom]                 = React.useState(0.45);
+  const [pan, setPan]                   = React.useState({ x: -320, y: -420 });
   const [isPanning, setIsPanning]       = React.useState(false);
   const [selectedStamp, setSelectedStamp] = React.useState(null);
   const [blobs, setBlobs]               = React.useState(INITIAL_BLOBS);
@@ -942,30 +942,30 @@ const WorldMap = () => {
               transformStyle: "preserve-3d",
             }}>
               {/* TILES */}
-              {Array.from({ length: GRID_SIZE }, (_, r) =>
-                Array.from({ length: GRID_SIZE }, (_, c) => {
-                  const terrain = getTerrain(c, r);
-                  const t = TERRAIN_COLORS[terrain];
-                  const isHl = highlightedTile?.col === c && highlightedTile?.row === r;
-                  return (
-                    <div
-                      key={`${c}-${r}`}
-                      style={{
-                        position: "absolute", left: c * TILE_W, top: r * TILE_H,
-                        width: TILE_W, height: TILE_H,
-                        background: isHl ? "rgba(0,212,170,0.22)" : t.fill,
-                        border: `1px solid ${isHl ? "rgba(0,212,170,0.65)" : t.border}`,
-                        boxSizing: "border-box",
-                        transition: "background 0.08s ease, border-color 0.08s ease",
-                      }}
-                      onMouseEnter={() => { if (!selectedStamp) setHighlightedTile({ col: c, row: r }); }}
-                      onMouseLeave={() => setHighlightedTile(null)}
-                      onDragOver={(e) => { e.preventDefault(); setHighlightedTile({ col: c, row: r }); }}
-                      onDrop={(e) => { e.preventDefault(); handleTileDrop({ col: c, row: r }); }}
-                    />
-                  );
-                })
-              )}
+              {Array.from({ length: GRID_SIZE * GRID_SIZE }, (_, i) => {
+                const r = Math.floor(i / GRID_SIZE);
+                const c = i % GRID_SIZE;
+                const terrain = getTerrain(c, r);
+                const t = TERRAIN_COLORS[terrain];
+                const isHl = highlightedTile?.col === c && highlightedTile?.row === r;
+                return (
+                  <div
+                    key={`t-${c}-${r}`}
+                    style={{
+                      position: "absolute", left: c * TILE_W, top: r * TILE_H,
+                      width: TILE_W, height: TILE_H,
+                      background: isHl ? "rgba(0,212,170,0.28)" : t.fill,
+                      border: `1px solid ${isHl ? "rgba(0,212,170,0.8)" : t.border}`,
+                      boxSizing: "border-box",
+                      transition: "background 0.08s ease",
+                    }}
+                    onMouseEnter={() => { if (!selectedStamp) setHighlightedTile({ col: c, row: r }); }}
+                    onMouseLeave={() => setHighlightedTile(null)}
+                    onDragOver={(e) => { e.preventDefault(); setHighlightedTile({ col: c, row: r }); }}
+                    onDrop={(e) => { e.preventDefault(); handleTileDrop({ col: c, row: r }); }}
+                  />
+                );
+              })}
 
               {/* PLACED PIECES */}
               {placedPieces.map(piece => (
@@ -1089,7 +1089,7 @@ const WorldMap = () => {
       />
 
       {/* ZOOM CONTROLS */}
-      <ZoomControls zoom={zoom} onZoom={setZoom} onReset={() => { setZoom(0.55); setPan({ x: -200, y: -180 }); }} />
+      <ZoomControls zoom={zoom} onZoom={setZoom} onReset={() => { setZoom(0.45); setPan({ x: -320, y: -420 }); }} />
 
       {/* COMPASS */}
       <div style={{
