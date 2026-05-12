@@ -331,7 +331,7 @@ const PersonalityRadar = ({ matrix }) => {
 
 const SpotifyEmbed = () => {
   const [input, setInput] = React.useState('');
-  const [playlistId, setPlaylistId] = React.useState(null);
+  const [playlistId, setPlaylistId] = React.useState('5xZehz5IFrEe3Y1Q7Uck3V');
   const [error, setError] = React.useState(null);
 
   const embed = () => {
