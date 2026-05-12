@@ -329,25 +329,25 @@ const PersonalityRadar = ({ matrix }) => {
   );
 };
 
-const SpotifySection = ({ onOceanDerived, onTraitsAdded }) => {
-  const [connected, setConnected] = React.useState(() => {
-    const SA = window.SpotifyAuth;
-    return !!(SA && SA.getToken());
-  });
+const SpotifyLogo = ({ size, color }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={{ flexShrink: 0 }}>
+    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+  </svg>
+);
+
+const SpotifySection = ({ onOceanDerived, onTraitsAdded, characterName }) => {
+  const [connected, setConnected] = React.useState(() => !!(window.SpotifyAuth && window.SpotifyAuth.getToken()));
   const [url, setUrl] = React.useState('');
   const [analyzing, setAnalyzing] = React.useState(false);
   const [result, setResult] = React.useState(null);
   const [error, setError] = React.useState(null);
-  const [expanded, setExpanded] = React.useState(false);
 
   React.useEffect(() => {
     const SA = window.SpotifyAuth;
     if (!SA) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('code')) {
-      SA.handleCallback().then(token => {
-        if (token) { setConnected(true); setExpanded(true); }
-      });
+      SA.handleCallback().then(token => { if (token) setConnected(true); });
     }
   }, []);
 
@@ -367,61 +367,83 @@ const SpotifySection = ({ onOceanDerived, onTraitsAdded }) => {
       const traits = SP.deriveTraits(genres);
       const genreCount = {};
       genres.forEach(g => { genreCount[g] = (genreCount[g] || 0) + 1; });
-      const topGenres = Object.entries(genreCount).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([g]) => g);
+      const topGenres = Object.entries(genreCount).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([g]) => g);
       setResult({ name: playlist.name, trackCount: tracks.length, topGenres, traits, ocean });
       if (onOceanDerived) onOceanDerived(ocean);
       if (onTraitsAdded) onTraitsAdded(traits);
     } catch (e) {
-      setError('Could not analyze playlist — check the URL and try again.');
+      setError('Could not load playlist — check the URL and try again.');
     }
     setAnalyzing(false);
   };
 
-  const SpotifyLogo = ({ size, color }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={{ flexShrink: 0 }}>
-      <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-    </svg>
-  );
+  const disconnect = () => {
+    const SA = window.SpotifyAuth;
+    if (SA) SA.logout();
+    setConnected(false); setResult(null); setUrl(''); setError(null);
+  };
 
+  // ── not connected ──────────────────────────────────────────────────────────
   if (!connected) {
     return (
-      <button
-        onClick={() => { const SA = window.SpotifyAuth; if (SA) SA.login(); }}
-        style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#1DB954", border: "none", borderRadius: 24, padding: "8px 16px", color: "#000", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
-      >
-        <SpotifyLogo size={14} color="#000"/> Connect Spotify
-      </button>
+      <div style={{ flexShrink: 0, padding: "10px 32px", borderBottom: "1px solid var(--iron)", background: "var(--steel)", display: "flex", alignItems: "center", gap: 16 }}>
+        <SpotifyLogo size={16} color="#1DB954"/>
+        <span style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--text-dim)" }}>
+          Connect Spotify to build <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{characterName || "this character"}'s</span> psyche from a playlist
+        </span>
+        <button
+          onClick={() => { const SA = window.SpotifyAuth; if (SA) SA.login(); }}
+          style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 8, background: "#1DB954", border: "none", borderRadius: 24, padding: "7px 18px", color: "#000", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}
+        >
+          <SpotifyLogo size={13} color="#000"/> Connect Spotify
+        </button>
+      </div>
     );
   }
 
-  return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(29,185,84,0.12)", border: "1px solid rgba(29,185,84,0.4)", borderRadius: 20, padding: "5px 12px" }}>
-        <SpotifyLogo size={12} color="#1DB954"/>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#1DB954", fontWeight: 600, letterSpacing: "0.08em" }}>CONNECTED</span>
-      </div>
-      {!expanded ? (
-        <button
-          onClick={() => setExpanded(true)}
-          style={{ background: "rgba(29,185,84,0.1)", border: "1px solid rgba(29,185,84,0.3)", borderRadius: 8, padding: "5px 12px", color: "#1DB954", fontSize: 11, fontFamily: "var(--font-mono)", cursor: "pointer", whiteSpace: "nowrap" }}
-        >Analyze playlist →</button>
-      ) : (
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <input
-            type="text" value={url} onChange={e => setUrl(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && analyze()}
-            placeholder="paste playlist URL…"
-            style={{ width: 220, background: "var(--obsidian)", border: "1px solid rgba(29,185,84,0.3)", borderRadius: 7, padding: "5px 10px", color: "var(--text-primary)", fontSize: 11, fontFamily: "var(--font-mono)", outline: "none" }}
-          />
-          <button
-            onClick={analyze} disabled={analyzing || !url.trim()}
-            style={{ background: analyzing ? "transparent" : "#1DB954", border: analyzing ? "1px solid var(--iron)" : "none", borderRadius: 7, padding: "5px 12px", color: analyzing ? "var(--text-dim)" : "#000", fontWeight: 700, fontSize: 11, cursor: analyzing ? "not-allowed" : "pointer" }}
-          >{analyzing ? "…" : "Analyze"}</button>
-          {result && <span style={{ fontSize: 11, color: "#1DB954", fontFamily: "var(--font-mono)" }}>✓ {result.name}</span>}
-          {error && <span style={{ fontSize: 11, color: "var(--blood)" }}>{error}</span>}
-          <button onClick={() => { const SA = window.SpotifyAuth; if (SA) SA.logout(); setConnected(false); setExpanded(false); setResult(null); }} style={{ background: "none", border: "none", color: "var(--text-ghost)", fontSize: 11, cursor: "pointer", marginLeft: 4 }}>disconnect</button>
+  // ── connected, result shown ────────────────────────────────────────────────
+  if (result) {
+    return (
+      <div style={{ flexShrink: 0, padding: "10px 32px", borderBottom: "1px solid var(--iron)", background: "rgba(29,185,84,0.04)", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+        <SpotifyLogo size={14} color="#1DB954"/>
+        <span style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--text-primary)", fontWeight: 600 }}>{result.name}</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-dim)" }}>{result.trackCount} tracks</span>
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+          {result.topGenres.map((g, i) => (
+            <span key={i} style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-secondary)", background: "var(--obsidian)", border: "1px solid var(--iron)", borderRadius: 20, padding: "2px 9px" }}>{g}</span>
+          ))}
         </div>
-      )}
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#1DB954", display: "inline-flex", alignItems: "center", gap: 5 }}>
+          <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="#1DB954" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Psyche matrix updated
+        </span>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 10 }}>
+          <button onClick={() => setResult(null)} style={{ background: "none", border: "1px solid var(--iron)", borderRadius: 7, padding: "4px 12px", color: "var(--text-dim)", fontSize: 11, cursor: "pointer", fontFamily: "var(--font-mono)" }}>Change playlist</button>
+          <button onClick={disconnect} style={{ background: "none", border: "none", color: "var(--text-ghost)", fontSize: 11, cursor: "pointer", fontFamily: "var(--font-mono)" }}>disconnect</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── connected, awaiting playlist ───────────────────────────────────────────
+  return (
+    <div style={{ flexShrink: 0, padding: "10px 32px", borderBottom: "1px solid var(--iron)", background: "var(--steel)", display: "flex", alignItems: "center", gap: 12 }}>
+      <SpotifyLogo size={14} color="#1DB954"/>
+      <span style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--text-dim)", whiteSpace: "nowrap" }}>
+        Link a playlist to <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{characterName || "this character"}</span>
+      </span>
+      <input
+        type="text" value={url} onChange={e => { setUrl(e.target.value); setError(null); }}
+        onKeyDown={e => e.key === "Enter" && analyze()}
+        placeholder="https://open.spotify.com/playlist/…"
+        style={{ flex: 1, minWidth: 0, background: "var(--obsidian)", border: "1px solid rgba(29,185,84,0.3)", borderRadius: 8, padding: "7px 14px", color: "var(--text-primary)", fontSize: 12, fontFamily: "var(--font-mono)", outline: "none" }}
+      />
+      <button
+        onClick={analyze} disabled={analyzing || !url.trim()}
+        style={{ flexShrink: 0, background: analyzing ? "transparent" : "#1DB954", border: analyzing ? "1px solid var(--iron)" : "none", borderRadius: 8, padding: "7px 18px", color: analyzing ? "var(--text-dim)" : "#000", fontWeight: 700, fontSize: 12, cursor: analyzing ? "default" : "pointer", whiteSpace: "nowrap" }}
+      >{analyzing ? "Analyzing…" : "Analyze"}</button>
+      {error && <span style={{ fontSize: 11, color: "var(--blood)", whiteSpace: "nowrap" }}>{error}</span>}
+      <button onClick={disconnect} style={{ background: "none", border: "none", color: "var(--text-ghost)", fontSize: 11, cursor: "pointer", fontFamily: "var(--font-mono)", whiteSpace: "nowrap", flexShrink: 0 }}>disconnect</button>
     </div>
   );
 };
@@ -487,15 +509,15 @@ const CharacterForge = () => {
   return (
     <div style={forgeStyles.root}>
       <div className="screen-header">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24 }}>
-          <div className="screen-header-title">Character forge</div>
-          <SpotifySection
-            onOceanDerived={handleOceanDerived}
-            onTraitsAdded={handleTraitsAdded}
-          />
-        </div>
+        <div className="screen-header-title">Character forge</div>
         <div className="screen-header-rule"/>
       </div>
+
+      <SpotifySection
+        onOceanDerived={handleOceanDerived}
+        onTraitsAdded={handleTraitsAdded}
+        characterName={active.first}
+      />
 
       <div style={forgeStyles.body}>
         {/* LEFT — IDENTITY */}
