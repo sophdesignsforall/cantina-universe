@@ -154,6 +154,77 @@ const SimulationRoom = () => {
   const [event, setEvent] = React.useState(
     `Bruce Wayne confronts Clark Kent in civilian clothes.\nHe knows. He has always known. He says:\n"I've been watching you, Kent. The world thinks you're a god.\nI think you're a mistake."`
   );
+  const [apiKey, setApiKey] = React.useState(() => localStorage.getItem('cantina_api_key') || '');
+  const [simText, setSimText] = React.useState(null);
+  const [simLoading, setSimLoading] = React.useState(false);
+  const [simError, setSimError] = React.useState(null);
+
+  const runSimulation = async () => {
+    // Guard 1: empty inciting event
+    if (!event.trim()) {
+      setSimError('Add an inciting event before running the simulation.');
+      return;
+    }
+    const key = apiKey.trim();
+    if (!key) {
+      setSimError('Enter your Anthropic API key above to run live simulations.');
+      return;
+    }
+    setRunning(true);
+    setDone(false);
+    setSimText(null);
+    setSimError(null);
+    setSimLoading(true);
+
+    // Guard 3: build non-empty system prompt with fallback
+    const locLabel = (LOCATIONS.find(l => l.id === loc) || {}).label || loc;
+    const timeLabel = (TIMES.find(t => t.id === time) || {}).l || time;
+    const worldBits = [
+      toggles.metro    ? 'Post-Metropolis guilt active'        : '',
+      toggles.trust    ? 'Public trust at 34%'                 : '',
+      toggles.lois     ? 'Lois Lane is present'                : '',
+      toggles.jonathan ? 'Jonathan Kent memory triggered'      : '',
+    ].filter(Boolean);
+    const systemPrompt = [
+      'You are a cinematic AI generating a DC Universe psychological simulation.',
+      'Write a psychologically precise, literary scene in the present tense.',
+      'Match the weight of a prestige drama. 3–5 paragraphs. Let action carry subtext.',
+      `Setting: ${locLabel}. Time context: ${timeLabel}.`,
+      worldBits.length ? `World state: ${worldBits.join('. ')}.` : '',
+      'Characters present: Superman (Clark Kent), Batman (Bruce Wayne).',
+    ].filter(s => s.trim()).join('\n') || 'You are a cinematic AI. Write a dramatic scene.';
+
+    // Guard 2: sanitize messages — trim content, fallback to 'Begin.' if empty
+    const messages = [{ role: 'user', content: event }]
+      .map(m => ({ ...m, content: (m.content || '').trim() || 'Begin.' }))
+      .filter(m => m.content.length > 0);
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1024, system: systemPrompt, messages }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `API error ${res.status}`);
+      }
+      const data = await res.json();
+      const text = (data.content?.[0]?.text || '').trim();
+      if (!text) throw new Error('No content returned from simulation.');
+      localStorage.setItem('cantina_api_key', key);
+      setSimText(text);
+    } catch (e) {
+      setSimError(e.message || 'Simulation failed — check API key and try again.');
+      setRunning(false);
+    }
+    setSimLoading(false);
+  };
 
   return (
     <div style={simStyles.root}>
@@ -264,8 +335,22 @@ const SimulationRoom = () => {
           </div>
         </div>
 
-        <button className="btn-cinema primary" onClick={() => { setRunning(true); setDone(false); }}>
-          <Icon name="bolt" size={16}/> Initiate Simulation
+        <div>
+          <div style={{ fontFamily: "var(--font-ui)", fontSize: 11, color: "var(--text-ghost)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>AI Engine Key</div>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={e => { setApiKey(e.target.value); setSimError(null); }}
+            placeholder="sk-ant-api03-…"
+            style={{ width: "100%", background: "var(--obsidian)", border: "1px solid var(--iron)", borderRadius: 7, padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-primary)", outline: "none", marginBottom: 10 }}
+          />
+          {simError && (
+            <div style={{ fontSize: 11, color: "var(--blood)", background: "var(--blood-faint)", border: "1px solid rgba(204,34,0,0.3)", borderRadius: 6, padding: "7px 10px", marginBottom: 10 }}>{simError}</div>
+          )}
+        </div>
+
+        <button className="btn-cinema primary" onClick={runSimulation} disabled={simLoading} style={{ opacity: simLoading ? 0.6 : 1 }}>
+          <Icon name="bolt" size={16}/> {simLoading ? 'Simulating…' : 'Initiate Simulation'}
         </button>
       </div>
 
@@ -291,7 +376,13 @@ const SimulationRoom = () => {
             fontFamily: "var(--font-body)", fontSize: 18, lineHeight: 2.0, color: "var(--text-primary)",
             fontWeight: 400, letterSpacing: "0.005em",
           }}>
-            <TypewriterText text={SIM_TEXT_FULL} onDone={() => setDone(true)}/>
+            {simLoading ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 12, color: "var(--text-dim)", fontFamily: "var(--font-mono)", fontSize: 13 }}>
+                <span className="cursor-blink"/> Simulation running…
+              </div>
+            ) : (
+              <TypewriterText key={simText || 'demo'} text={simText || SIM_TEXT_FULL} onDone={() => setDone(true)}/>
+            )}
           </div>
 
           {/* Influence log */}

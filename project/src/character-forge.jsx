@@ -380,9 +380,9 @@ const SpotifySection = ({ onOceanDerived, onTraitsAdded }) => {
   );
 
   return (
-    <div style={{ background: "rgba(29,185,84,0.05)", border: "1px solid rgba(29,185,84,0.2)", borderRadius: 12, overflow: "hidden" }}>
+    <div style={{ background: "rgba(29,185,84,0.07)", border: "1px solid rgba(29,185,84,0.35)", borderRadius: 12, overflow: "hidden" }}>
       {/* Header */}
-      <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(29,185,84,0.12)", display: "flex", alignItems: "center", gap: 9 }}>
+      <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(29,185,84,0.2)", display: "flex", alignItems: "center", gap: 9 }}>
         {spotifyIcon(15, "#1DB954")}
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#1DB954", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>Spotify Psyche</span>
         <span style={{ fontSize: 11, color: "var(--text-dim)" }}>Derive character from music</span>
