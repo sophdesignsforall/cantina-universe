@@ -271,9 +271,13 @@ const PieceLibrary = ({ onDragStart }) => {
                   key={piece.id}
                   draggable
                   onDragStart={(e) => {
+                    // Suppress browser default drag ghost; we render our own
+                    const empty = new Image();
+                    empty.src = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+                    e.dataTransfer.setDragImage(empty, 0, 0);
                     e.dataTransfer.setData("pieceId", piece.id);
                     e.dataTransfer.setData("pieceCategory", cat.id);
-                    e.currentTarget.style.opacity = "0.5";
+                    e.currentTarget.style.opacity = "0.45";
                     e.currentTarget.style.transform = "scale(1.08)";
                     onDragStart(piece);
                   }}
@@ -958,6 +962,14 @@ const WorldMap = () => {
 
   const activeLayers = layers.filter(l => l.active);
 
+  // Which tiles are occupied (by pieces or characters)
+  const occupiedTiles = React.useMemo(() => {
+    const s = new Set();
+    placedPieces.forEach(p => s.add(`${p.col},${p.row}`));
+    Object.values(characterPositions).forEach(pos => s.add(`${pos.col},${pos.row}`));
+    return s;
+  }, [placedPieces, characterPositions]);
+
   const handleLayerToggle = React.useCallback((id, active) => {
     setLayers(prev => prev.map(l => l.id === id ? { ...l, active } : l));
   }, []);
@@ -1009,17 +1021,88 @@ const WorldMap = () => {
   };
 
   const handleTileDrop = React.useCallback((tile) => {
+    const key = `${tile.col},${tile.row}`;
     if (draggingCharId) {
+      // Allow moving to occupied tiles (characters can share)
       setCharacterPositions(prev => ({ ...prev, [draggingCharId]: tile }));
       setDraggingCharId(null);
     } else if (draggingPiece) {
-      setPlacedPieces(prev => [...prev, { ...draggingPiece, col: tile.col, row: tile.row, instanceId: Date.now() }]);
+      // Only drop on unoccupied tiles
+      if (!occupiedTiles.has(key)) {
+        setPlacedPieces(prev => [...prev, { ...draggingPiece, col: tile.col, row: tile.row, instanceId: Date.now() }]);
+      }
       setDraggingPiece(null);
     }
     setHighlightedTile(null);
-  }, [draggingCharId, draggingPiece]);
+  }, [draggingCharId, draggingPiece, occupiedTiles]);
+
+  // Center viewport on a tile coordinate (approximate iso projection)
+  const centerOnTile = React.useCallback((col, row) => {
+    if (!mapOuterRef.current) return;
+    const rect = mapOuterRef.current.getBoundingClientRect();
+    const { zoom: z } = stateRef.current;
+    const tx = col * TILE_W + TILE_W / 2;
+    const ty = row * TILE_H + TILE_H / 2;
+    const gx = GRID_SIZE * TILE_W / 2;
+    const gy = GRID_SIZE * TILE_H / 2;
+    const dx = tx - gx, dy = ty - gy;
+    // Approximate iso screen offset: rotateZ(-45) then rotateX(52)
+    const s45 = 0.7071, cos52 = 0.6157;
+    const screenDx = (dx - dy) * s45;
+    const screenDy = (dx + dy) * s45 * cos52;
+    const newPan = {
+      x: -(screenDx * z),
+      y: -(screenDy * z) + rect.height * 0.05,
+    };
+    stateRef.current.pan = newPan;
+    setPan(newPan);
+  }, []);
 
   const removeBlob = (id) => { setBlobs(b => b.filter(x => x.id !== id)); setSelectedBlob(null); };
+
+  // Keyboard shortcuts
+  React.useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setSelectedStamp(null);
+        setSelectedBlob(null);
+        setDraggingCharId(null);
+        setDraggingPiece(null);
+        setHighlightedTile(null);
+        setCursorPos(null);
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedBlob && document.activeElement.tagName !== "INPUT") {
+        removeBlob(selectedBlob.id);
+      }
+      if ((e.key === "=" || e.key === "+") && !e.metaKey && !e.ctrlKey) applyZoom(+0.1);
+      if (e.key === "-" && !e.metaKey && !e.ctrlKey) applyZoom(-0.1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedBlob, applyZoom]);
+
+  // Drag ghost — tracks cursor via document dragover, updates DOM directly (no re-render)
+  const ghostRef = React.useRef(null);
+  const draggingPieceRef = React.useRef(null);
+  React.useEffect(() => { draggingPieceRef.current = draggingPiece; }, [draggingPiece]);
+  React.useEffect(() => {
+    const onDragOver = (e) => {
+      if (ghostRef.current && draggingPieceRef.current) {
+        ghostRef.current.style.left   = `${e.clientX}px`;
+        ghostRef.current.style.top    = `${e.clientY}px`;
+        ghostRef.current.style.display = "flex";
+      }
+    };
+    const onDragEnd = () => {
+      if (ghostRef.current) ghostRef.current.style.display = "none";
+    };
+    document.addEventListener("dragover", onDragOver);
+    document.addEventListener("dragend",  onDragEnd);
+    return () => {
+      document.removeEventListener("dragover", onDragOver);
+      document.removeEventListener("dragend",  onDragEnd);
+    };
+  }, []);
 
   const PANEL_W = 272;
 
@@ -1067,16 +1150,28 @@ const WorldMap = () => {
                 const terrain = getTerrain(c, r);
                 const t = TERRAIN_COLORS[terrain];
                 const isHl = highlightedTile?.col === c && highlightedTile?.row === r;
+                const isOccupied = occupiedTiles.has(`${c},${r}`);
+                const isDraggingPieceMode = !!draggingPiece;
+                const invalid = isHl && isDraggingPieceMode && isOccupied;
+                const validDrop = isHl && !invalid;
                 return (
                   <div
                     key={`t-${c}-${r}`}
                     style={{
                       position: "absolute", left: c * TILE_W, top: r * TILE_H,
                       width: TILE_W, height: TILE_H,
-                      background: isHl ? t.hl : t.fill,
-                      border: `1px solid ${isHl ? t.hlBorder : t.border}`,
+                      background: invalid  ? "rgba(204,34,0,0.22)"
+                                : validDrop ? t.hl
+                                : t.fill,
+                      border: `1px solid ${
+                        invalid   ? "rgba(204,34,0,0.75)"
+                        : validDrop ? t.hlBorder
+                        : t.border
+                      }`,
                       boxSizing: "border-box",
-                      boxShadow: isHl ? `inset 0 0 12px rgba(0,229,255,0.15)` : "none",
+                      boxShadow: invalid   ? "inset 0 0 14px rgba(204,34,0,0.2)"
+                               : validDrop ? "inset 0 0 12px rgba(0,229,255,0.15)"
+                               : "none",
                       transition: "background 0.08s ease, border-color 0.08s ease, box-shadow 0.08s ease",
                     }}
                     onMouseEnter={() => { if (!selectedStamp) setHighlightedTile({ col: c, row: r }); }}
@@ -1242,7 +1337,25 @@ const WorldMap = () => {
       )}
 
       {/* PRESENCE STRIP */}
-      <PresenceStrip chars={CHARACTERS_MAP} activeChar={activeChar} onSelect={setActiveChar} leftOpen={leftOpen} />
+      <PresenceStrip
+        chars={CHARACTERS_MAP} activeChar={activeChar} leftOpen={leftOpen}
+        onSelect={(id) => {
+          setActiveChar(id);
+          const pos = characterPositions[id] || CHARACTERS_MAP.find(c => c.id === id);
+          if (pos) centerOnTile(pos.col, pos.row);
+        }}
+      />
+
+      {/* DRAG GHOST — follows cursor, direct DOM update via ref */}
+      <div ref={ghostRef} style={{
+        position: "fixed", pointerEvents: "none", zIndex: 1000,
+        transform: "translate(-50%, -60%)",
+        display: "none", flexDirection: "column", alignItems: "center", gap: 4,
+        filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.9))",
+        opacity: 0.75,
+      }}>
+        {draggingPiece && <PieceThumb piece={draggingPiece} size={56} />}
+      </div>
 
       {/* STAMP PLACEMENT LABEL */}
       {selectedStamp && (
