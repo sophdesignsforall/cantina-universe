@@ -3,9 +3,9 @@
 
 // ── ISOMETRIC MATH ────────────────────────────────────────────────────
 const GRID_SIZE  = 24;
-const TILE_W     = 72;   // tile face width
-const TILE_H     = 36;   // tile face height (2:1 ratio)
-const TILE_DEPTH = 22;   // side face height
+const TILE_W     = 80;   // tile face width
+const TILE_H     = 40;   // tile face height (2:1 ratio)
+const TILE_DEPTH = 40;   // side face height — equal to TILE_H for true cube proportions
 
 // Offset so leftmost tile (col=0,row=GRID_SIZE-1) starts at x=0
 const ISO_OX = (GRID_SIZE - 1) * (TILE_W / 2);
@@ -20,13 +20,34 @@ const isoToScreen = (col, row) => ({
 const seeded = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
 // ── TERRAIN ───────────────────────────────────────────────────────────
-// top / left-face / right-face / grid-line
+// Each terrain: top face / left face (SW shadow) / right face (SE deep shadow) / top grid line / side edge stroke
+// Top face is brightest, left is 50% darker, right is 70% darker — sells the cube lighting
 const TERRAIN_3D = {
-  plains: { top: "#0C1E2E", lft: "#060E18", rgt: "#080F1C", line: "rgba(0,229,255,0.45)",   hl: "#1A4A5C", hlLine: "rgba(0,229,255,0.9)"  },
-  hills:  { top: "#1A1508", lft: "#0E0B04", rgt: "#110D06", line: "rgba(201,168,76,0.5)",   hl: "#2E2210", hlLine: "rgba(201,168,76,0.95)" },
-  water:  { top: "#050E26", lft: "#02060F", rgt: "#030819", line: "rgba(41,182,246,0.6)",   hl: "#0C2040", hlLine: "rgba(41,182,246,1)"    },
-  forest: { top: "#091A0B", lft: "#040D06", rgt: "#061209", line: "rgba(0,191,165,0.5)",    hl: "#143820", hlLine: "rgba(0,191,165,0.95)"  },
-  urban:  { top: "#0D0D22", lft: "#060610", rgt: "#080818", line: "rgba(124,77,255,0.5)",   hl: "#1C1C40", hlLine: "rgba(124,77,255,0.95)" },
+  plains: {
+    top: "#1E3A55", lft: "#0E2035", rgt: "#091525",
+    line: "rgba(0,210,255,0.65)", edge: "rgba(0,160,220,0.3)",
+    hl: "#2E5572", hlLft: "#182E48", hlRgt: "#101E30", hlLine: "rgba(0,225,255,1)",
+  },
+  hills: {
+    top: "#382A12", lft: "#221A0A", rgt: "#160E06",
+    line: "rgba(210,170,55,0.65)", edge: "rgba(160,120,30,0.3)",
+    hl: "#4E3C18", hlLft: "#302410", hlRgt: "#1E1608", hlLine: "rgba(225,185,60,1)",
+  },
+  water: {
+    top: "#102248", lft: "#081428", rgt: "#050D1E",
+    line: "rgba(30,155,255,0.7)", edge: "rgba(20,100,200,0.3)",
+    hl: "#182C5E", hlLft: "#0E1C3E", hlRgt: "#0A1228", hlLine: "rgba(60,175,255,1)",
+  },
+  forest: {
+    top: "#183522", lft: "#0E2015", rgt: "#0A160E",
+    line: "rgba(0,200,120,0.65)", edge: "rgba(0,140,80,0.3)",
+    hl: "#224A2E", hlLft: "#163020", hlRgt: "#0E1E14", hlLine: "rgba(0,220,130,1)",
+  },
+  urban: {
+    top: "#2A1452", lft: "#180C35", rgt: "#100820",
+    line: "rgba(170,75,255,0.7)", edge: "rgba(110,40,200,0.3)",
+    hl: "#3A1C6A", hlLft: "#221244", hlRgt: "#160C2C", hlLine: "rgba(190,90,255,1)",
+  },
 };
 
 const TERRAIN_MAP = Array.from({ length: GRID_SIZE }, (_, r) =>
@@ -219,29 +240,35 @@ const IsoTile = React.memo(({ col, row, terrain, highlighted, invalid, onEnter, 
   const hw = TILE_W / 2, hh = TILE_H / 2;
   const D = TILE_DEPTH;
 
+  const td = TERRAIN_3D[terrain];
   const t = invalid
-    ? { top: "#2A0808", lft: "#140404", rgt: "#1A0606", line: "rgba(204,34,0,0.85)", hl: "#2A0808", hlLine: "" }
+    ? { top: "#380A0A", lft: "#200505", rgt: "#160303", line: "rgba(230,40,0,0.9)", edge: "rgba(180,20,0,0.5)", hlLft: "", hlRgt: "" }
     : highlighted
-      ? { ...TERRAIN_3D[terrain], top: TERRAIN_3D[terrain].hl, lft: "#0A1C28", rgt: "#0C2030", line: TERRAIN_3D[terrain].hlLine }
-      : TERRAIN_3D[terrain];
+      ? { top: td.hl, lft: td.hlLft, rgt: td.hlRgt, line: td.hlLine, edge: td.edge }
+      : td;
 
   // Top face: diamond
   const top = `${x+hw},${y} ${x+TILE_W},${y+hh} ${x+hw},${y+TILE_H} ${x},${y+hh}`;
-  // Left face (SW)
+  // Left face (SW) — lighter shadow
   const lft = `${x},${y+hh} ${x+hw},${y+TILE_H} ${x+hw},${y+TILE_H+D} ${x},${y+hh+D}`;
-  // Right face (SE)
+  // Right face (SE) — deeper shadow
   const rgt = `${x+hw},${y+TILE_H} ${x+TILE_W},${y+hh} ${x+TILE_W},${y+hh+D} ${x+hw},${y+TILE_H+D}`;
-  // Top face outline (grid line)
-  const lineOpacity = highlighted ? 1 : 0.7;
+
+  const sw = highlighted ? 1.5 : 0.8;
+  const edgeSW = highlighted ? 1.0 : 0.6;
 
   return (
     <g>
+      {/* Side faces — rendered first (behind top) */}
       <polygon points={rgt} fill={t.rgt} />
+      <polygon points={rgt} fill="none" stroke={t.edge} strokeWidth={edgeSW} />
       <polygon points={lft} fill={t.lft} />
+      <polygon points={lft} fill="none" stroke={t.edge} strokeWidth={edgeSW} />
+      {/* Top face */}
       <polygon points={top} fill={t.top} />
-      {/* Grid line on top face */}
-      <polygon points={top} fill="none" stroke={t.line} strokeWidth={highlighted ? 1.2 : 0.6} opacity={lineOpacity} />
-      {/* Invisible hit area (top face) */}
+      {/* Neon grid line on top face */}
+      <polygon points={top} fill="none" stroke={t.line} strokeWidth={sw} />
+      {/* Invisible hit area */}
       <polygon points={top} fill="transparent"
         onMouseEnter={onEnter} onMouseLeave={onLeave}
         onDragOver={onDragOver} onDrop={onDrop}
@@ -963,7 +990,7 @@ const WorldMap = () => {
   const initPan  = { x: -ISO_SVG_W * initZoom / 2, y: -ISO_SVG_H * initZoom / 2 };
 
   return (
-    <div style={{ flex: 1, height: "100vh", position: "relative", overflow: "hidden", background: "#030810", fontFamily: "var(--font-ui)" }}>
+    <div style={{ flex: 1, height: "100vh", position: "relative", overflow: "hidden", background: "#060310", fontFamily: "var(--font-ui)" }}>
       <style>{animCSS}</style>
 
       {/* PAN/ZOOM OUTER */}
@@ -990,9 +1017,10 @@ const WorldMap = () => {
           >
             {/* Deep space ambient background */}
             <defs>
-              <radialGradient id="bgGrad" cx="50%" cy="40%" r="60%">
-                <stop offset="0%"   stopColor="#0A1828" />
-                <stop offset="100%" stopColor="#030810" />
+              <radialGradient id="bgGrad" cx="50%" cy="35%" r="70%">
+                <stop offset="0%"   stopColor="#140A28" />
+                <stop offset="55%"  stopColor="#0A061A" />
+                <stop offset="100%" stopColor="#050310" />
               </radialGradient>
             </defs>
             <rect width={ISO_SVG_W} height={ISO_SVG_H} fill="url(#bgGrad)" />
