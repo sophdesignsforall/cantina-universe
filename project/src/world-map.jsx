@@ -63,6 +63,19 @@ const TERRAIN_MAP = Array.from({ length: GRID_SIZE }, (_, r) =>
 );
 const getTerrain = (col, row) => TERRAIN_MAP[row]?.[col] || "plains";
 
+// Universe 2 — alternate seeded terrain for the second reality layer
+const TERRAIN_MAP_2 = Array.from({ length: GRID_SIZE }, (_, r) =>
+  Array.from({ length: GRID_SIZE }, (_, c) => {
+    const s = seeded(r * GRID_SIZE + c + 8317);
+    if (s < 0.18) return "water";
+    if (s < 0.35) return "urban";
+    if (s < 0.50) return "hills";
+    if (s < 0.62) return "forest";
+    return "plains";
+  })
+);
+const getTerrain2 = (col, row) => TERRAIN_MAP_2[row]?.[col] || "plains";
+
 // Pre-sorted tile render order (painter's algorithm: back to front)
 const SORTED_TILES = (() => {
   const tiles = [];
@@ -551,14 +564,18 @@ const PieceThumb = ({ piece, size = 48 }) => (
 
 // ── PIECE LIBRARY ─────────────────────────────────────────────────────
 const PieceLibrary = ({ onDragStart }) => {
-  const [openCat, setOpenCat] = React.useState("terrain");
+  const allCatIds = PIECE_CATEGORIES.map(c => c.id);
+  const [openCats, setOpenCats] = React.useState(allCatIds);
   const [tooltip, setTooltip] = React.useState(null);
+  const toggle = (id) => setOpenCats(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   return (
     <div style={{ position: "relative" }}>
-      {PIECE_CATEGORIES.map(cat => (
+      {PIECE_CATEGORIES.map(cat => {
+        const isOpen = openCats.includes(cat.id);
+        return (
         <div key={cat.id}>
           <button
-            onClick={() => setOpenCat(o => o === cat.id ? null : cat.id)}
+            onClick={() => toggle(cat.id)}
             style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
               width: "100%", padding: "9px 18px", background: "transparent",
@@ -571,9 +588,11 @@ const PieceLibrary = ({ onDragStart }) => {
                 {cat.label}
               </span>
             </span>
-            <span style={{ color: "var(--text-dim)", fontSize: 12 }}>{openCat === cat.id ? "−" : "+"}</span>
+            <svg width={12} height={12} viewBox="0 0 12 12" style={{ transition: "transform 0.2s", transform: isOpen ? "rotate(0deg)" : "rotate(-90deg)", opacity: 0.5 }}>
+              <polyline points="2,4 6,8 10,4" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"/>
+            </svg>
           </button>
-          {openCat === cat.id && (
+          {isOpen && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "10px 12px 12px" }}>
               {WORLD_PIECES[cat.id].map(piece => (
                 <div key={piece.id} draggable
@@ -614,7 +633,8 @@ const PieceLibrary = ({ onDragStart }) => {
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
       {tooltip && (
         <div style={{
           position: "fixed", bottom: 100, left: 16, right: 16,
@@ -1105,6 +1125,19 @@ const WorldMap = () => {
   const [draggingCharId, setDraggingCharId]   = React.useState(null);
   const [draggingPiece, setDraggingPiece]     = React.useState(null);
 
+  // ── UNIVERSE 2 ────────────────────────────────────────────────────────
+  const [showUniverse2, setShowUniverse2]         = React.useState(false);
+  const [activeUniverse, setActiveUniverse]       = React.useState(1);
+  const [placedPieces2, setPlacedPieces2]         = React.useState([]);
+  const [characterPositions2, setCharacterPositions2] = React.useState({});
+  const [saveFeedback, setSaveFeedback]           = React.useState(false);
+
+  // Derived: route interactions to the active universe
+  const activePieces    = activeUniverse === 1 ? placedPieces : placedPieces2;
+  const setActivePieces = activeUniverse === 1 ? setPlacedPieces : setPlacedPieces2;
+  const activeCharPos   = activeUniverse === 1 ? characterPositions : characterPositions2;
+  const setActiveCharPos= activeUniverse === 1 ? setCharacterPositions : setCharacterPositions2;
+
   const mapOuterRef = React.useRef(null);
   const panRef      = React.useRef({ active: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 });
   const stateRef    = React.useRef({ zoom: 0.75, pan: { x: -ISO_SVG_W * 0.75 / 2, y: -ISO_SVG_H * 0.75 / 2 } });
@@ -1149,10 +1182,10 @@ const WorldMap = () => {
 
   const occupiedTiles = React.useMemo(() => {
     const s = new Set();
-    placedPieces.forEach(p => s.add(`${p.col},${p.row}`));
-    Object.values(characterPositions).forEach(pos => s.add(`${pos.col},${pos.row}`));
+    activePieces.forEach(p => s.add(`${p.col},${p.row}`));
+    Object.values(activeCharPos).forEach(pos => s.add(`${pos.col},${pos.row}`));
     return s;
-  }, [placedPieces, characterPositions]);
+  }, [activePieces, activeCharPos]);
 
   const activeLayers = layers.filter(l => l.active);
   const handleLayerToggle = React.useCallback((id, active) => {
@@ -1191,16 +1224,16 @@ const WorldMap = () => {
   const handleTileDrop = React.useCallback((tile) => {
     const key = `${tile.col},${tile.row}`;
     if (draggingCharId) {
-      setCharacterPositions(prev => ({ ...prev, [draggingCharId]: tile }));
+      setActiveCharPos(prev => ({ ...prev, [draggingCharId]: tile }));
       setDraggingCharId(null);
     } else if (draggingPiece) {
       if (!occupiedTiles.has(key)) {
-        setPlacedPieces(prev => [...prev, { ...draggingPiece, col: tile.col, row: tile.row, instanceId: Date.now() }]);
+        setActivePieces(prev => [...prev, { ...draggingPiece, col: tile.col, row: tile.row, instanceId: Date.now() }]);
       }
       setDraggingPiece(null);
     }
     setHighlightedTile(null);
-  }, [draggingCharId, draggingPiece, occupiedTiles]);
+  }, [draggingCharId, draggingPiece, occupiedTiles, setActiveCharPos, setActivePieces]);
 
   const centerOnTile = React.useCallback((col, row) => {
     const { zoom: z } = stateRef.current;
@@ -1211,6 +1244,15 @@ const WorldMap = () => {
   }, []);
 
   const removeBlob = (id) => { setBlobs(b => b.filter(x => x.id !== id)); setSelectedBlob(null); };
+
+  const handleSave = React.useCallback(() => {
+    try {
+      localStorage.setItem("cantina-u1", JSON.stringify({ placedPieces, characterPositions }));
+      localStorage.setItem("cantina-u2", JSON.stringify({ placedPieces2, characterPositions2 }));
+    } catch {}
+    setSaveFeedback(true);
+    setTimeout(() => setSaveFeedback(false), 2000);
+  }, [placedPieces, characterPositions, placedPieces2, characterPositions2]);
 
   // Keyboard shortcuts
   React.useEffect(() => {
@@ -1276,14 +1318,29 @@ const WorldMap = () => {
             <rect width={ISO_SVG_W} height={ISO_SVG_H} fill="url(#bgGrad)" />
 
             {/* Tiles — painter's algorithm (back to front by col+row) */}
+            {/* Universe behind (ghost layer at 30% opacity) */}
+            {showUniverse2 && (
+              <g opacity={0.3} style={{ pointerEvents: "none" }}>
+                {SORTED_TILES.map(({ c, r }) => (
+                  <IsoTile key={`u${activeUniverse === 1 ? 2 : 1}-${c}-${r}`}
+                    col={c} row={r}
+                    terrain={activeUniverse === 1 ? getTerrain2(c, r) : getTerrain(c, r)}
+                    highlighted={false} invalid={false}
+                    onEnter={()=>{}} onLeave={()=>{}} onDragOver={()=>{}} onDrop={()=>{}}
+                  />
+                ))}
+              </g>
+            )}
+            {/* Active universe (full opacity, interactive) */}
             {SORTED_TILES.map(({ c, r }) => {
               const isHl = highlightedTile?.col === c && highlightedTile?.row === r;
               const isOccupied = occupiedTiles.has(`${c},${r}`);
               const invalid = isHl && !!draggingPiece && isOccupied;
+              const terrain = activeUniverse === 1 ? getTerrain(c, r) : getTerrain2(c, r);
               return (
                 <IsoTile key={`t-${c}-${r}`}
                   col={c} row={r}
-                  terrain={getTerrain(c, r)}
+                  terrain={terrain}
                   highlighted={isHl && !invalid}
                   invalid={invalid}
                   onEnter={() => { if (!selectedStamp) setHighlightedTile({ col: c, row: r }); }}
@@ -1297,11 +1354,20 @@ const WorldMap = () => {
 
           {/* OVERLAY: placed pieces + characters (same coordinate system as SVG) */}
           <div style={{ position: "absolute", top: 0, left: 0, width: ISO_SVG_W, height: ISO_SVG_H, pointerEvents: "none" }}>
-            {placedPieces.map(piece => (
+            {/* Ghost universe pieces */}
+            {showUniverse2 && (
+              <div style={{ opacity: 0.3 }}>
+                {(activeUniverse === 1 ? placedPieces2 : placedPieces).map(piece => (
+                  <PlacedPiece key={`ghost-${piece.instanceId}`} piece={piece} col={piece.col} row={piece.row} />
+                ))}
+              </div>
+            )}
+            {/* Active universe pieces */}
+            {activePieces.map(piece => (
               <PlacedPiece key={piece.instanceId} piece={piece} col={piece.col} row={piece.row} />
             ))}
             {CHARACTERS_MAP.map(c => {
-              const pos = characterPositions[c.id] || { col: c.col, row: c.row };
+              const pos = activeCharPos[c.id] || { col: c.col, row: c.row };
               const { x, y } = isoToScreen(pos.col, pos.row);
               return (
                 <CharacterIcon
@@ -1331,6 +1397,76 @@ const WorldMap = () => {
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 11, opacity: 0.03,
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`}}/>
       </div>
+
+      {/* ── UNIVERSE SWITCHER ─────────────────────────────────────────── */}
+      <div style={{
+        position: "absolute", bottom: 96, left: "50%", transform: "translateX(-50%)",
+        zIndex: 30, display: "flex", alignItems: "center", gap: 6,
+        background: "rgba(5,2,20,0.92)", backdropFilter: "blur(10px)",
+        border: `1px solid ${showUniverse2 && activeUniverse === 2 ? "rgba(255,100,220,0.4)" : "rgba(110,65,255,0.35)"}`,
+        borderRadius: 24, padding: "5px 10px",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.6)",
+        transition: "border-color 0.2s",
+      }}>
+        {/* Universe 1 tab */}
+        <button onClick={() => setActiveUniverse(1)} style={{
+          padding: "4px 12px", borderRadius: 16, border: "none", cursor: "pointer",
+          fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.14em",
+          background: activeUniverse === 1 ? "rgba(110,65,255,0.25)" : "transparent",
+          color: activeUniverse === 1 ? "#C090FF" : "rgba(140,100,255,0.5)",
+          transition: "all 0.15s",
+        }}>UNIVERSE 1</button>
+
+        <div style={{ width: 1, height: 16, background: "rgba(110,65,255,0.2)" }} />
+
+        {/* Universe 2 toggle/tab */}
+        <button onClick={() => {
+          if (!showUniverse2) { setShowUniverse2(true); setActiveUniverse(2); }
+          else { setActiveUniverse(activeUniverse === 2 ? 1 : 2); }
+        }} style={{
+          padding: "4px 12px", borderRadius: 16, border: "none", cursor: "pointer",
+          fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.14em",
+          background: showUniverse2 && activeUniverse === 2 ? "rgba(255,80,200,0.2)" : "transparent",
+          color: showUniverse2 ? (activeUniverse === 2 ? "#FF80E0" : "rgba(255,120,220,0.5)") : "rgba(110,65,255,0.4)",
+          transition: "all 0.15s",
+        }}>{showUniverse2 ? "UNIVERSE 2" : "+ UNIVERSE 2"}</button>
+
+        {showUniverse2 && <>
+          <div style={{ width: 1, height: 16, background: "rgba(110,65,255,0.2)" }} />
+          {/* Hide U2 */}
+          <button onClick={() => { setShowUniverse2(false); setActiveUniverse(1); }} style={{
+            padding: "4px 8px", borderRadius: 12, border: "1px solid rgba(110,65,255,0.2)",
+            background: "transparent", color: "rgba(140,100,255,0.5)", cursor: "pointer",
+            fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.1em",
+          }}>HIDE</button>
+        </>}
+
+        <div style={{ width: 1, height: 16, background: "rgba(110,65,255,0.2)" }} />
+
+        {/* Save */}
+        <button onClick={handleSave} style={{
+          padding: "4px 12px", borderRadius: 16, border: "1px solid rgba(110,65,255,0.3)",
+          background: saveFeedback ? "rgba(45,255,120,0.15)" : "transparent",
+          color: saveFeedback ? "#2DFF78" : "rgba(140,100,255,0.6)",
+          cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.14em",
+          transition: "all 0.2s",
+        }}>{saveFeedback ? "✓ SAVED" : "SAVE"}</button>
+      </div>
+
+      {/* Universe badge — shows which universe is active */}
+      {showUniverse2 && (
+        <div style={{
+          position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)",
+          zIndex: 30, padding: "4px 14px", borderRadius: 20,
+          background: activeUniverse === 2 ? "rgba(255,60,180,0.15)" : "rgba(110,65,255,0.12)",
+          border: `1px solid ${activeUniverse === 2 ? "rgba(255,80,200,0.5)" : "rgba(110,65,255,0.3)"}`,
+          fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.16em",
+          color: activeUniverse === 2 ? "#FF80E0" : "#A070FF",
+          backdropFilter: "blur(6px)",
+        }}>
+          EDITING — {activeUniverse === 1 ? "UNIVERSE 1" : "UNIVERSE 2"}
+        </div>
+      )}
 
       {/* LEFT PANEL */}
       <div style={{
