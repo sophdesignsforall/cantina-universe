@@ -20,33 +20,34 @@ const isoToScreen = (col, row) => ({
 const seeded = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
 // ── TERRAIN ───────────────────────────────────────────────────────────
-// Each terrain: top face / left face (SW shadow) / right face (SE deep shadow) / top grid line / side edge stroke
-// Top face is brightest, left is 50% darker, right is 70% darker — sells the cube lighting
+// ALL tiles share the same deep-purple base platform (matching reference art).
+// Terrain type is expressed through feature art rendered on top, not tile color.
+// Water gets a subtle blue-tinted top. Urban is slightly darker violet.
 const TERRAIN_3D = {
   plains: {
-    top: "#1E3A55", lft: "#0E2035", rgt: "#091525",
-    line: "rgba(0,210,255,0.65)", edge: "rgba(0,160,220,0.3)",
-    hl: "#2E5572", hlLft: "#182E48", hlRgt: "#101E30", hlLine: "rgba(0,225,255,1)",
+    top: "#1E1248", lft: "#130D30", rgt: "#0A0820",
+    line: "rgba(110,65,255,0.55)", edge: "rgba(80,45,200,0.3)",
+    hl: "#2C1A68", hlLft: "#1C1244", hlRgt: "#10082C", hlLine: "rgba(150,100,255,1)",
   },
   hills: {
-    top: "#382A12", lft: "#221A0A", rgt: "#160E06",
-    line: "rgba(210,170,55,0.65)", edge: "rgba(160,120,30,0.3)",
-    hl: "#4E3C18", hlLft: "#302410", hlRgt: "#1E1608", hlLine: "rgba(225,185,60,1)",
+    top: "#1E1248", lft: "#130D30", rgt: "#0A0820",
+    line: "rgba(110,65,255,0.55)", edge: "rgba(80,45,200,0.3)",
+    hl: "#2C1A68", hlLft: "#1C1244", hlRgt: "#10082C", hlLine: "rgba(150,100,255,1)",
   },
   water: {
-    top: "#102248", lft: "#081428", rgt: "#050D1E",
-    line: "rgba(30,155,255,0.7)", edge: "rgba(20,100,200,0.3)",
-    hl: "#182C5E", hlLft: "#0E1C3E", hlRgt: "#0A1228", hlLine: "rgba(60,175,255,1)",
+    top: "#0E1245", lft: "#090C2E", rgt: "#05081E",
+    line: "rgba(0,180,255,0.7)", edge: "rgba(0,130,220,0.3)",
+    hl: "#162060", hlLft: "#0E163E", hlRgt: "#080E28", hlLine: "rgba(0,230,255,1)",
   },
   forest: {
-    top: "#183522", lft: "#0E2015", rgt: "#0A160E",
-    line: "rgba(0,200,120,0.65)", edge: "rgba(0,140,80,0.3)",
-    hl: "#224A2E", hlLft: "#163020", hlRgt: "#0E1E14", hlLine: "rgba(0,220,130,1)",
+    top: "#1A1045", lft: "#11092E", rgt: "#09061E",
+    line: "rgba(100,60,240,0.55)", edge: "rgba(70,40,190,0.3)",
+    hl: "#281862", hlLft: "#18103E", hlRgt: "#0E0828", hlLine: "rgba(130,90,255,1)",
   },
   urban: {
-    top: "#2A1452", lft: "#180C35", rgt: "#100820",
-    line: "rgba(170,75,255,0.7)", edge: "rgba(110,40,200,0.3)",
-    hl: "#3A1C6A", hlLft: "#221244", hlRgt: "#160C2C", hlLine: "rgba(190,90,255,1)",
+    top: "#160E42", lft: "#0E092A", rgt: "#08061C",
+    line: "rgba(130,70,255,0.6)", edge: "rgba(90,50,220,0.35)",
+    hl: "#221460", hlLft: "#160E3C", hlRgt: "#0C0826", hlLine: "rgba(160,100,255,1)",
   },
 };
 
@@ -234,6 +235,101 @@ const animCSS = `
   .wpm-blob-trauma   { animation-duration: 6s   !important; }
 `;
 
+// ── TERRAIN FEATURE ART ───────────────────────────────────────────────
+// SVG shapes rendered on each tile matching the reference isometric art style.
+// cx = tile horizontal center, ty = tile top vertex y, cy = tile face center y.
+const TerrainFeature = ({ terrain, x, y }) => {
+  const cx = x + TILE_W / 2;
+  const ty = y;
+  const cy = y + TILE_H / 2;
+
+  if (terrain === "hills") return (
+    <g opacity={0.92} style={{ pointerEvents: "none" }}>
+      {/* Back peak (far left, small) */}
+      <polygon points={`${cx-36},${cy} ${cx-24},${ty-16} ${cx-12},${cy}`}
+        fill="#1A0C55" stroke="#2E1870" strokeWidth={0.6}/>
+      {/* Left peak (medium) */}
+      <polygon points={`${cx-20},${cy-2} ${cx-8},${ty-26} ${cx+4},${cy-2}`}
+        fill="#241468" stroke="#402898" strokeWidth={0.7}/>
+      {/* Main peak (tallest, right) */}
+      <polygon points={`${cx-4},${cy-5} ${cx+16},${ty-45} ${cx+38},${cy-5}`}
+        fill="#301A78" stroke="#5030A8" strokeWidth={0.8}/>
+      {/* Bright pink/white tips */}
+      <polygon points={`${cx+14},${ty-45} ${cx+16},${ty-52} ${cx+18},${ty-45}`} fill="#F070E0" opacity={0.95}/>
+      <polygon points={`${cx-10},${ty-26} ${cx-8},${ty-31} ${cx-6},${ty-26}`}   fill="#D050C8" opacity={0.85}/>
+      {/* Light streaks */}
+      <line x1={cx+16} y1={ty-45} x2={cx+11} y2={ty-32} stroke="#C860E8" strokeWidth={1.6} opacity={0.7}/>
+      <line x1={cx-8}  y1={ty-26} x2={cx-11} y2={ty-19} stroke="#A840C8" strokeWidth={1.2} opacity={0.6}/>
+    </g>
+  );
+
+  if (terrain === "water") return (
+    <g style={{ pointerEvents: "none" }}>
+      {/* Blue tint on tile surface */}
+      <polygon points={`${cx},${ty} ${x+TILE_W},${cy} ${cx},${cy+TILE_H/2} ${x},${cy}`}
+        fill="rgba(0,140,255,0.13)"/>
+      {/* Wave 1 */}
+      <path d={`M${cx-34},${cy-7} Q${cx-16},${cy-14} ${cx},${cy-7} Q${cx+16},${cy} ${cx+34},${cy-7}`}
+        fill="none" stroke="#00DDFF" strokeWidth={1.8} opacity={0.9}/>
+      {/* Wave 2 */}
+      <path d={`M${cx-28},${cy+1} Q${cx-10},${cy-6} ${cx+6},${cy+1} Q${cx+20},${cy+8} ${cx+28},${cy+1}`}
+        fill="none" stroke="#00AAEE" strokeWidth={1.5} opacity={0.8}/>
+      {/* Wave 3 */}
+      <path d={`M${cx-20},${cy+8} Q${cx-4},${cy+4} ${cx+10},${cy+8} Q${cx+20},${cy+12} ${cx+22},${cy+8}`}
+        fill="none" stroke="#0080CC" strokeWidth={1.2} opacity={0.65}/>
+      {/* Glow halo */}
+      <path d={`M${cx-34},${cy-7} Q${cx-16},${cy-14} ${cx},${cy-7} Q${cx+16},${cy} ${cx+34},${cy-7}`}
+        fill="none" stroke="#80EEFF" strokeWidth={7} opacity={0.1}/>
+    </g>
+  );
+
+  if (terrain === "forest") {
+    const mb = (ox, oy, w, h, d, bright) => {
+      const mhw=w/2, mhh=h/2;
+      const mt=`${ox+mhw},${oy} ${ox+w},${oy+mhh} ${ox+mhw},${oy+h} ${ox},${oy+mhh}`;
+      const ml=`${ox},${oy+mhh} ${ox+mhw},${oy+h} ${ox+mhw},${oy+h+d} ${ox},${oy+mhh+d}`;
+      const mr=`${ox+mhw},${oy+h} ${ox+w},${oy+mhh} ${ox+w},${oy+mhh+d} ${ox+mhw},${oy+h+d}`;
+      return <g key={`${ox}${oy}`}>
+        <polygon points={mr} fill={bright ? "#100A38" : "#0E0835"}/>
+        <polygon points={ml} fill={bright ? "#180C50" : "#140A44"}/>
+        <polygon points={mt} fill={bright ? "#281878" : "#1E1260"} stroke="rgba(90,55,210,0.5)" strokeWidth={0.6}/>
+      </g>;
+    };
+    return (
+      <g opacity={0.95} style={{ pointerEvents: "none" }}>
+        {mb(cx-36, cy-17, 16, 8,  12, false)}
+        {mb(cx-14, cy-25, 20, 10, 15, true)}
+        {mb(cx+8,  cy-17, 16, 8,  12, false)}
+        {mb(cx-24, cy-5,  14, 7,  10, false)}
+        {mb(cx+20, cy-12, 14, 7,  11, false)}
+      </g>
+    );
+  }
+
+  if (terrain === "urban") {
+    const bld = (ox, oy, w, h, d, winC, winY) => {
+      const bhw=w/2, bhh=h/2;
+      const bt=`${ox+bhw},${oy} ${ox+w},${oy+bhh} ${ox+bhw},${oy+h} ${ox},${oy+bhh}`;
+      const bl=`${ox},${oy+bhh} ${ox+bhw},${oy+h} ${ox+bhw},${oy+h+d} ${ox},${oy+bhh+d}`;
+      const br=`${ox+bhw},${oy+h} ${ox+w},${oy+bhh} ${ox+w},${oy+bhh+d} ${ox+bhw},${oy+h+d}`;
+      return <g key={`${ox}${oy}`}>
+        <polygon points={br} fill="#0A0735" stroke="rgba(70,45,210,0.6)" strokeWidth={0.7}/>
+        <polygon points={bl} fill="#120A48" stroke="rgba(80,55,225,0.6)" strokeWidth={0.7}/>
+        <polygon points={bt} fill="#1A0E60" stroke="rgba(110,75,255,0.85)" strokeWidth={0.8}/>
+        {winY.map((wy, i) => <circle key={i} cx={ox+w-2} cy={wy} r={1.4} fill={winC} opacity={0.9}/>)}
+      </g>;
+    };
+    return (
+      <g style={{ pointerEvents: "none" }}>
+        {bld(cx+2,  ty-28, 22, 11, 34, "#FFB020", [ty-16, ty-5, ty+6])}
+        {bld(cx-28, ty-48, 24, 12, 54, "#00CCFF", [ty-35, ty-22, ty-9, ty+4])}
+      </g>
+    );
+  }
+
+  return null; // plains — clean platform, no decoration
+};
+
 // ── ISO TILE (SVG polygon group) ──────────────────────────────────────
 const IsoTile = React.memo(({ col, row, terrain, highlighted, invalid, onEnter, onLeave, onDragOver, onDrop }) => {
   const { x, y } = isoToScreen(col, row);
@@ -268,7 +364,9 @@ const IsoTile = React.memo(({ col, row, terrain, highlighted, invalid, onEnter, 
       <polygon points={top} fill={t.top} />
       {/* Neon grid line on top face */}
       <polygon points={top} fill="none" stroke={t.line} strokeWidth={sw} />
-      {/* Invisible hit area */}
+      {/* Terrain feature art (mountains / waves / trees / buildings) */}
+      {!invalid && <TerrainFeature terrain={terrain} x={x} y={y} />}
+      {/* Invisible hit area — topmost for pointer events */}
       <polygon points={top} fill="transparent"
         onMouseEnter={onEnter} onMouseLeave={onLeave}
         onDragOver={onDragOver} onDrop={onDrop}
@@ -278,25 +376,176 @@ const IsoTile = React.memo(({ col, row, terrain, highlighted, invalid, onEnter, 
   );
 });
 
-// ── PIECE THUMBNAIL ───────────────────────────────────────────────────
+// ── PIECE THUMBNAIL — isometric SVG art (viewBox 0 0 80 80) ──────────
+// Platform origin: ox=4 oy=38, w=72 h=32 depth=10
+// cx=40 ty=38 cy=54 — feature zone is y=0..38 (38px above platform)
+const _PT = { ox:4, oy:38, w:72, h:32, d:10 };
+const _pcx = _PT.ox + _PT.w/2;  // 40
+const _pty = _PT.oy;              // 38
+const _pcy = _pty + _PT.h/2;     // 54
+const _ptop = `${_pcx},${_pty} ${_PT.ox+_PT.w},${_pcy} ${_pcx},${_pty+_PT.h} ${_PT.ox},${_pcy}`;
+const _plft = `${_PT.ox},${_pcy} ${_pcx},${_pty+_PT.h} ${_pcx},${_pty+_PT.h+_PT.d} ${_PT.ox},${_pcy+_PT.d}`;
+const _prgt = `${_pcx},${_pty+_PT.h} ${_PT.ox+_PT.w},${_pcy} ${_PT.ox+_PT.w},${_pcy+_PT.d} ${_pcx},${_pty+_PT.h+_PT.d}`;
+
+const _isoBox = (ox, oy, w, h, d, tC, lC, rC, eC) => {
+  const hw=w/2, hh=h/2;
+  const t=`${ox+hw},${oy} ${ox+w},${oy+hh} ${ox+hw},${oy+h} ${ox},${oy+hh}`;
+  const l=`${ox},${oy+hh} ${ox+hw},${oy+h} ${ox+hw},${oy+h+d} ${ox},${oy+hh+d}`;
+  const r=`${ox+hw},${oy+h} ${ox+w},${oy+hh} ${ox+w},${oy+hh+d} ${ox+hw},${oy+h+d}`;
+  return <g><polygon points={r} fill={rC}/><polygon points={l} fill={lC}/><polygon points={t} fill={tC} stroke={eC||"rgba(110,75,255,0.7)"} strokeWidth={0.9}/></g>;
+};
+
+const PieceThumbArt = ({ id, cx, ty, cy }) => {
+  if (id === "mountain") return (
+    <g opacity={0.9}>
+      <polygon points={`${cx-34},${cy} ${cx-20},${ty-14} ${cx-6},${cy}`}    fill="#1A0C55" stroke="#2E1870" strokeWidth={0.6}/>
+      <polygon points={`${cx-18},${cy-2} ${cx-4},${ty-24} ${cx+12},${cy-2}`} fill="#241468" stroke="#4028A0" strokeWidth={0.7}/>
+      <polygon points={`${cx-2},${cy-4} ${cx+18},${ty-40} ${cx+38},${cy-4}`} fill="#301A78" stroke="#5030A8" strokeWidth={0.8}/>
+      <polygon points={`${cx+16},${ty-40} ${cx+18},${ty-47} ${cx+20},${ty-40}`} fill="#F070E0" opacity={0.95}/>
+      <polygon points={`${cx-6},${ty-24} ${cx-4},${ty-29} ${cx-2},${ty-24}`}  fill="#D050C8" opacity={0.85}/>
+      <line x1={cx+18} y1={ty-40} x2={cx+13} y2={ty-30} stroke="#C860E8" strokeWidth={1.5} opacity={0.7}/>
+    </g>
+  );
+  if (id === "lake" || id === "port") return (
+    <g>
+      <polygon points={`${cx},${ty} ${cx+36},${cy} ${cx},${cy+16} ${cx-36},${cy}`} fill="rgba(0,140,255,0.12)"/>
+      <path d={`M${cx-32},${cy-6} Q${cx-14},${cy-13} ${cx+2},${cy-6} Q${cx+18},${cy+1} ${cx+32},${cy-6}`} fill="none" stroke="#00DDFF" strokeWidth={1.8} opacity={0.9}/>
+      <path d={`M${cx-26},${cy+3} Q${cx-8},${cy-4} ${cx+8},${cy+3} Q${cx+22},${cy+10} ${cx+28},${cy+3}`} fill="none" stroke="#00AAEE" strokeWidth={1.5} opacity={0.75}/>
+      <path d={`M${cx-18},${cy+10} Q${cx-2},${cy+6} ${cx+14},${cy+10}`} fill="none" stroke="#0088CC" strokeWidth={1.2} opacity={0.6}/>
+      {id === "port" && _isoBox(cx-8, ty-20, 16, 8, 18, "#141040", "#0C0A2C", "#08061E")}
+    </g>
+  );
+  if (id === "forest-p") return (
+    <g opacity={0.95}>
+      {[[-34,cy-14,14,7,10,false],[-14,cy-22,18,9,13,true],[8,cy-15,14,7,10,false],[-22,cy-3,13,6,9,false],[18,cy-10,13,6,9,false]].map(([ox,oy,w,h,d,br],i)=>{
+        const mhw=w/2,mhh=h/2;
+        const mt=`${cx+ox+mhw},${oy} ${cx+ox+w},${oy+mhh} ${cx+ox+mhw},${oy+h} ${cx+ox},${oy+mhh}`;
+        const ml=`${cx+ox},${oy+mhh} ${cx+ox+mhw},${oy+h} ${cx+ox+mhw},${oy+h+d} ${cx+ox},${oy+mhh+d}`;
+        const mr=`${cx+ox+mhw},${oy+h} ${cx+ox+w},${oy+mhh} ${cx+ox+w},${oy+mhh+d} ${cx+ox+mhw},${oy+h+d}`;
+        return <g key={i}><polygon points={mr} fill={br?"#100A38":"#0E0835"}/><polygon points={ml} fill={br?"#180C50":"#140A44"}/><polygon points={mt} fill={br?"#281878":"#1E1260"} stroke="rgba(90,55,210,0.5)" strokeWidth={0.6}/></g>;
+      })}
+    </g>
+  );
+  if (id === "desert") return (
+    <g opacity={0.85}>
+      {[[cx-26,cy-2,52,10],[cx-18,cy-11,36,9],[cx-10,cy-20,20,8]].map(([ox,oy,w,h],i)=>{
+        const hw=w/2,hh=h/2;
+        return <g key={i}>
+          <polygon points={`${ox+hw},${oy} ${ox+w},${oy+hh} ${ox+hw},${oy+h} ${ox},${oy+hh}`} fill={`rgba(${30+i*10},${14+i*5},${70+i*10},${0.85-i*0.1})`} stroke={`rgba(${100+i*20},${60+i*15},${255},${0.5+i*0.1})`} strokeWidth={0.8}/>
+        </g>;
+      })}
+    </g>
+  );
+  if (id === "village") return (
+    <g>
+      {_isoBox(cx-22, ty-22, 20, 10, 26, "#141060", "#0C0840", "#08062A")}
+      {_isoBox(cx+6,  ty-16, 16, 8,  20, "#180E68", "#0E0A45", "#090730")}
+      <circle cx={cx-8} cy={ty-12} r={1.4} fill="#FFB020" opacity={0.9}/>
+      <circle cx={cx+20} cy={ty-8} r={1.4} fill="#00CCFF" opacity={0.9}/>
+    </g>
+  );
+  if (id === "city") return (
+    <g>
+      {_isoBox(cx+2,  ty-24, 22, 11, 32, "#1A0E60", "#0C0840", "#08062A")}
+      {_isoBox(cx-28, ty-46, 24, 12, 52, "#1A0E60", "#0E0840", "#09062C")}
+      {[ty-34,ty-22,ty-10,ty+2].map((wy,i)=><circle key={i} cx={cx-8} cy={wy} r={1.3} fill="#00CCFF" opacity={0.9}/>)}
+      {[ty-12,ty-2,ty+8].map((wy,i)=><circle key={i} cx={cx+24} cy={wy} r={1.3} fill="#FFB020" opacity={0.9}/>)}
+    </g>
+  );
+  if (id === "fortress") return (
+    <g>
+      {_isoBox(cx-26, ty-28, 52, 14, 32, "#181060", "#0E0840", "#09062C")}
+      {_isoBox(cx-26, ty-40, 10, 8,  14, "#201468", "#12094A", "#0C0632")}
+      {_isoBox(cx+16, ty-40, 10, 8,  14, "#201468", "#12094A", "#0C0632")}
+      <line x1={cx-26} y1={ty-32} x2={cx+26} y2={ty-32} stroke="rgba(130,80,255,0.5)" strokeWidth={0.8}/>
+    </g>
+  );
+  if (id === "ruins") return (
+    <g opacity={0.85}>
+      {_isoBox(cx-20, ty-20, 16, 8,  22, "#141060", "#0C0840", "#08062A")}
+      {_isoBox(cx+4,  ty-14, 18, 9,  18, "#100C50", "#0A0838", "#060624")}
+      <polygon points={`${cx-20},${ty-20} ${cx-12},${ty-26} ${cx-4},${ty-20} ${cx-12},${ty-14}`} fill="#1A1268" stroke="rgba(80,50,200,0.4)" strokeWidth={0.7} opacity={0.7}/>
+    </g>
+  );
+  if (id === "reactor" || id === "lab") return (
+    <g>
+      {/* Cooling tower (wide base, narrow top) */}
+      <polygon points={`${cx-12},${ty} ${cx-6},${ty+6} ${cx-6},${ty+36} ${cx-16},${ty+42} ${cx-16},${ty+6}`} fill="#160C45" stroke="rgba(0,200,255,0.6)" strokeWidth={0.8}/>
+      <polygon points={`${cx+12},${ty} ${cx+6},${ty+6} ${cx+6},${ty+36} ${cx+16},${ty+42} ${cx+16},${ty+6}`} fill="#1A0E50" stroke="rgba(0,200,255,0.6)" strokeWidth={0.8}/>
+      {/* Ellipse tops */}
+      <ellipse cx={cx-10} cy={ty+2}   rx={6}  ry={3}  fill="#0E1240" stroke="rgba(0,220,255,0.8)" strokeWidth={1}/>
+      <ellipse cx={cx+10} cy={ty+2}   rx={6}  ry={3}  fill="#0E1240" stroke="rgba(0,220,255,0.8)" strokeWidth={1}/>
+      <ellipse cx={cx}    cy={ty+36}  rx={16} ry={5}  fill="#120E50" stroke="rgba(80,50,220,0.6)" strokeWidth={0.8}/>
+      <circle cx={cx} cy={ty+14} r={2} fill="#00EEFF" opacity={0.7}/>
+    </g>
+  );
+  if (id === "tower") return (
+    <g>
+      {/* Tall thin antenna */}
+      <line x1={cx} y1={ty} x2={cx} y2={ty+40} stroke="#2A1870" strokeWidth={4}/>
+      <line x1={cx} y1={ty} x2={cx} y2={ty+40} stroke="rgba(120,70,255,0.7)" strokeWidth={1.5}/>
+      {/* Cross beams */}
+      {[12,22,32].map(off=><line key={off} x1={cx-8+off*0.15} y1={ty+off} x2={cx+8-off*0.15} y2={ty+off} stroke="rgba(110,65,240,0.6)" strokeWidth={1}/>)}
+      {/* Top beacon */}
+      <circle cx={cx} cy={ty} r={3} fill="#00EEFF" opacity={0.9}/>
+      <circle cx={cx} cy={ty} r={6} fill="none" stroke="#00EEFF" strokeWidth={0.8} opacity={0.4}/>
+    </g>
+  );
+  if (id === "vault") return (
+    <g>
+      {_isoBox(cx-14, ty-20, 28, 14, 26, "#201468", "#120E4A", "#0C0932")}
+      {/* Door */}
+      <polygon points={`${cx+10},${ty-6} ${cx+14},${ty-4} ${cx+14},${ty+12} ${cx+10},${ty+14}`} fill="#0A0828" stroke="#FFD700" strokeWidth={0.8}/>
+      <circle cx={cx+12} cy={ty+4} r={2} fill="#FFD700" opacity={0.9}/>
+    </g>
+  );
+  if (id === "highway" || id === "airport") return (
+    <g>
+      {/* Road surface on tile */}
+      <polygon points={`${cx},${ty} ${cx+36},${cy} ${cx},${cy+16} ${cx-36},${cy}`} fill="rgba(40,30,100,0.3)"/>
+      {/* Glowing road lines */}
+      {id === "highway" ? <>
+        <line x1={cx-32} y1={cy-4} x2={cx+32} y2={cy-4} stroke="#FF9A00" strokeWidth={3} opacity={0.85}/>
+        <line x1={cx-32} y1={cy+4} x2={cx+32} y2={cy+4} stroke="#FFB030" strokeWidth={3} opacity={0.85}/>
+        <line x1={cx-32} y1={cy-4} x2={cx+32} y2={cy-4} stroke="#FFF0A0" strokeWidth={7} opacity={0.15}/>
+        {/* Dashes */}
+        {[-24,-8,8,24].map(ox=><line key={ox} x1={cx+ox-5} y1={cy} x2={cx+ox+5} y2={cy} stroke="#FFFAAA" strokeWidth={1.5} opacity={0.7}/>)}
+      </> : <>
+        {/* Runway cross */}
+        <line x1={cx-32} y1={cy} x2={cx+32} y2={cy} stroke="#FF9A00" strokeWidth={2.5} opacity={0.8}/>
+        <line x1={cx} y1={ty+4} x2={cx} y2={cy+14} stroke="#FF9A00" strokeWidth={2.5} opacity={0.8}/>
+        {[-20,0,20].map(ox=><line key={ox} x1={cx+ox-6} y1={cy-8} x2={cx+ox+6} y2={cy-8} stroke="#FFF0A0" strokeWidth={1.2} opacity={0.5}/>)}
+      </>}
+    </g>
+  );
+  if (id === "bridge") return (
+    <g>
+      {/* Road deck */}
+      <line x1={cx-34} y1={cy} x2={cx+34} y2={cy} stroke="#FF9A00" strokeWidth={4} opacity={0.8}/>
+      <line x1={cx-34} y1={cy} x2={cx+34} y2={cy} stroke="#FFF0A0" strokeWidth={8} opacity={0.1}/>
+      {/* Towers */}
+      {_isoBox(cx-18, ty-30, 10, 5, 35, "#281468", "#160E42", "#0E0830")}
+      {_isoBox(cx+8,  ty-30, 10, 5, 35, "#281468", "#160E42", "#0E0830")}
+      {/* Cables */}
+      {[[-18,0],[8,0],[-13,8],[3,8]].map(([ox,oy],i)=><line key={i} x1={cx+ox+5} y1={ty-30} x2={cx+ox-10+i*6} y2={cy+oy} stroke="#FF9A00" strokeWidth={0.8} opacity={0.7}/>)}
+    </g>
+  );
+  return <text x={40} y={54} fontSize={22} textAnchor="middle" dominantBaseline="middle">{/* fallback emoji */}</text>;
+};
+
 const PieceThumb = ({ piece, size = 48 }) => (
-  <div style={{ position: "relative", width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-    <div style={{
-      position: "absolute", inset: 0,
-      background: `linear-gradient(145deg, ${piece.colors.top} 0%, rgba(4,4,10,0.95) 100%)`,
-      clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
-    }} />
-    <div style={{
-      position: "absolute", inset: 0,
-      background: `radial-gradient(circle at 38% 38%, ${piece.colors.accent}28 0%, transparent 65%)`,
-      clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
-    }} />
-    <div style={{
-      position: "relative", zIndex: 1, fontSize: Math.round(size * 0.36), lineHeight: 1,
-      filter: `drop-shadow(0 0 4px ${piece.colors.glow})`,
-    }}>
-      {piece.icon}
-    </div>
+  <div style={{ width: size, height: size, flexShrink: 0 }}>
+    <svg width={size} height={size} viewBox="0 0 80 80" style={{ overflow: "visible" }}>
+      {/* Platform base — deep purple, neon edge */}
+      <polygon points={_prgt} fill="#0A0820"/>
+      <polygon points={_prgt} fill="none" stroke="rgba(80,45,200,0.4)" strokeWidth={0.8}/>
+      <polygon points={_plft} fill="#130D30"/>
+      <polygon points={_plft} fill="none" stroke="rgba(80,45,200,0.4)" strokeWidth={0.8}/>
+      <polygon points={_ptop} fill="#1E1248"/>
+      <polygon points={_ptop} fill="none" stroke={piece.colors.glow} strokeWidth={1.2}/>
+      {/* Piece-specific art */}
+      <PieceThumbArt id={piece.id} cx={_pcx} ty={_pty} cy={_pcy}/>
+    </svg>
   </div>
 );
 
@@ -990,7 +1239,7 @@ const WorldMap = () => {
   const initPan  = { x: -ISO_SVG_W * initZoom / 2, y: -ISO_SVG_H * initZoom / 2 };
 
   return (
-    <div style={{ flex: 1, height: "100vh", position: "relative", overflow: "hidden", background: "#060310", fontFamily: "var(--font-ui)" }}>
+    <div style={{ flex: 1, height: "100vh", position: "relative", overflow: "hidden", background: "#05021A", fontFamily: "var(--font-ui)" }}>
       <style>{animCSS}</style>
 
       {/* PAN/ZOOM OUTER */}
@@ -1015,12 +1264,11 @@ const WorldMap = () => {
             width={ISO_SVG_W} height={ISO_SVG_H}
             style={{ display: "block", overflow: "visible" }}
           >
-            {/* Deep space ambient background */}
             <defs>
-              <radialGradient id="bgGrad" cx="50%" cy="35%" r="70%">
-                <stop offset="0%"   stopColor="#140A28" />
-                <stop offset="55%"  stopColor="#0A061A" />
-                <stop offset="100%" stopColor="#050310" />
+              <radialGradient id="bgGrad" cx="50%" cy="35%" r="65%">
+                <stop offset="0%"   stopColor="#1A0A38" />
+                <stop offset="50%"  stopColor="#0E0628" />
+                <stop offset="100%" stopColor="#06031A" />
               </radialGradient>
             </defs>
             <rect width={ISO_SVG_W} height={ISO_SVG_H} fill="url(#bgGrad)" />
