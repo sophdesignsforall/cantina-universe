@@ -723,25 +723,27 @@ const CharacterIcon = ({ char: c, screenX, screenY, isActive, onSelect, onDragSt
 // ── PLACED PIECE (flat, positioned via isoToScreen) ────────────────────
 const PlacedPiece = ({ piece, col, row }) => {
   const { x, y } = isoToScreen(col, row);
+  // Position SVG so that SVG y=40 aligns with the tile's top vertex (screen y),
+  // and SVG y=60 aligns with the tile's face center (screen y + TILE_H/2).
+  // This lets PieceThumbArt render features rising from the tile surface upward.
+  const svgH = 88;
   return (
     <div style={{
       position: "absolute",
-      left: x + TILE_W / 2 - 18,
-      top: y + TILE_H / 2 - 42,
+      left: x,
+      top: y - 40,
+      width: TILE_W,
       pointerEvents: "none",
       zIndex: 15,
       animation: "pieceDropIn 0.4s cubic-bezier(0.34,1.56,0.64,1) backwards",
     }}>
+      <svg width={TILE_W} height={svgH} style={{ overflow: "visible", display: "block" }}>
+        <PieceThumbArt id={piece.id} cx={TILE_W / 2} ty={40} cy={60} />
+      </svg>
       <div style={{
-        fontSize: 26, textAlign: "center", lineHeight: 1,
-        filter: `drop-shadow(0 6px 14px ${piece.colors?.glow || "rgba(0,0,0,0.9)"}) drop-shadow(0 2px 4px rgba(0,0,0,0.9))`,
-      }}>
-        {piece.icon}
-      </div>
-      <div style={{
-        fontSize: 9, color: "rgba(255,255,255,0.5)", textAlign: "center",
-        fontFamily: "var(--font-ui)", letterSpacing: "0.04em", marginTop: 2,
-        textShadow: "0 1px 3px rgba(0,0,0,0.9)",
+        fontSize: 8, color: "rgba(255,255,255,0.45)", textAlign: "center",
+        fontFamily: "var(--font-ui)", letterSpacing: "0.05em", marginTop: -8,
+        textShadow: "0 1px 4px rgba(0,0,0,1)",
       }}>{piece.label}</div>
     </div>
   );
