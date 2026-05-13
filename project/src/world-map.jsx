@@ -1239,7 +1239,7 @@ const WorldMap = () => {
     const { zoom: z } = stateRef.current;
     const { x, y } = isoToScreen(col, row);
     const cx = x + TILE_W / 2, cy = y + TILE_H / 2;
-    const newPan = { x: -(cx - ISO_SVG_W / 2) * z, y: -(cy - ISO_SVG_H / 2) * z };
+    const newPan = { x: -cx * z, y: -cy * z };
     stateRef.current.pan = newPan; setPan(newPan);
   }, []);
 
