@@ -8,12 +8,13 @@ const TILE_H = 60;
 
 const seeded = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
+// Dark navy-to-teal palette, cyan glow lines
 const TERRAIN_COLORS = {
-  plains: { fill: "#1C3A22", border: "rgba(45,255,120,0.45)"   },
-  hills:  { fill: "#332612", border: "rgba(201,168,76,0.5)"    },
-  water:  { fill: "#0A1E3A", border: "rgba(0,160,255,0.55)"    },
-  forest: { fill: "#0E2810", border: "rgba(30,200,80,0.5)"     },
-  urban:  { fill: "#1A1A30", border: "rgba(160,160,255,0.45)"  },
+  plains: { fill: "#0D1F2D", border: "rgba(0,229,255,0.22)", hl: "#1A4A5C", hlBorder: "rgba(0,229,255,0.7)" },
+  hills:  { fill: "#112030", border: "rgba(0,229,255,0.25)", hl: "#1A4A5C", hlBorder: "rgba(0,229,255,0.7)" },
+  water:  { fill: "#071528", border: "rgba(0,180,255,0.38)", hl: "#0D2E50", hlBorder: "rgba(0,200,255,0.8)" },
+  forest: { fill: "#0B1D14", border: "rgba(0,229,255,0.2)",  hl: "#163624", hlBorder: "rgba(0,229,255,0.7)" },
+  urban:  { fill: "#0F1428", border: "rgba(124,77,255,0.32)", hl: "#1A1A42", hlBorder: "rgba(124,77,255,0.75)" },
 };
 
 const TERRAIN_MAP = Array.from({ length: GRID_SIZE }, (_, r) =>
@@ -100,39 +101,55 @@ const CHARACTERS_MAP = [
 ];
 
 const LAYERS_DATA = [
-  { id: "social",      label: "SOCIAL COHESION",     color: "#00C9A7", description: "Connection and trust between populations",      blendColor: "rgba(0,201,167,0.12)",   active: true  },
-  { id: "economic",    label: "ECONOMIC PRESSURE",   color: "#C9A84C", description: "Wealth concentration and poverty distribution",  blendColor: "rgba(201,168,76,0.12)",  active: true  },
-  { id: "biological",  label: "BIOLOGICAL BASELINE", color: "#2DFF78", description: "Population health and environmental conditions", blendColor: "rgba(45,255,120,0.10)",  active: true  },
-  { id: "political",   label: "POLITICAL CONTROL",   color: "#FFB347", description: "Governance strength and contested zones",        blendColor: "rgba(255,179,71,0.10)",  active: false },
-  { id: "trauma",      label: "TRAUMA MEMORY",       color: "#00D4FF", description: "Historical events encoded in the landscape",     blendColor: "rgba(0,212,255,0.08)",   active: true  },
-  { id: "sensitivity", label: "SENSITIVITY MAP",     color: "#E0B0FF", description: "Character psychological exposure to this zone",  blendColor: "rgba(224,176,255,0.10)", active: false },
+  { id: "social",      label: "SOCIAL COHESION",     color: "#00C9A7", blendColor: "rgba(0,201,167,0.12)",   active: true  },
+  { id: "economic",    label: "ECONOMIC PRESSURE",   color: "#C9A84C", blendColor: "rgba(201,168,76,0.12)",  active: true  },
+  { id: "biological",  label: "BIOLOGICAL BASELINE", color: "#2DFF78", blendColor: "rgba(45,255,120,0.10)",  active: true  },
+  { id: "political",   label: "POLITICAL CONTROL",   color: "#FFB347", blendColor: "rgba(255,179,71,0.10)",  active: false },
+  { id: "trauma",      label: "TRAUMA MEMORY",       color: "#00D4FF", blendColor: "rgba(0,212,255,0.08)",   active: true  },
+  { id: "sensitivity", label: "SENSITIVITY MAP",     color: "#E0B0FF", blendColor: "rgba(224,176,255,0.10)", active: false },
 ];
 
-// ── WORLD PIECES ──────────────────────────────────────────────────────
+// ── WORLD ELEMENTS ────────────────────────────────────────────────────
 const WORLD_PIECES = {
   terrain: [
-    { id: "mountain",    label: "Mountain",   icon: "⛰️", height: 80 },
-    { id: "lake",        label: "Lake",       icon: "💧", height: 5  },
-    { id: "forest-p",   label: "Forest",     icon: "🌲", height: 40 },
-    { id: "desert",     label: "Desert",     icon: "🏜️", height: 20 },
+    { id: "mountain", label: "Mountain", icon: "⛰️", height: 80, desc: "Blocks passage, +2 defense",
+      colors: { top: "#2A2A3E", accent: "#E0F7FA", glow: "rgba(224,247,250,0.55)" } },
+    { id: "lake",     label: "Lake",     icon: "💧", height: 5,  desc: "Water barrier, impassable",
+      colors: { top: "#1A237E", accent: "#00E5FF", glow: "rgba(0,229,255,0.55)" } },
+    { id: "forest-p", label: "Forest",   icon: "🌲", height: 40, desc: "+1 stealth, slows movement",
+      colors: { top: "#1B4332", accent: "#00BFA5", glow: "rgba(0,191,165,0.55)" } },
+    { id: "desert",   label: "Desert",   icon: "🏜️", height: 20, desc: "Harsh terrain, -1 stamina/turn",
+      colors: { top: "#6D4C41", accent: "#FFD54F", glow: "rgba(255,213,79,0.55)" } },
   ],
   settlements: [
-    { id: "city",       label: "City",       icon: "🏙️", height: 60 },
-    { id: "village",    label: "Village",    icon: "🏘️", height: 30 },
-    { id: "fortress",   label: "Fortress",   icon: "🏰", height: 70 },
-    { id: "ruins",      label: "Ruins",      icon: "🏚️", height: 25 },
+    { id: "village",  label: "Village",  icon: "🏘️", height: 30, desc: "Civilian shelter, +3 morale",
+      colors: { top: "#37474F", accent: "#FFB300", glow: "rgba(255,179,0,0.55)" } },
+    { id: "city",     label: "City",     icon: "🏙️", height: 60, desc: "Population hub, high exposure",
+      colors: { top: "#1C1C2E", accent: "#7C4DFF", glow: "rgba(124,77,255,0.6)" } },
+    { id: "fortress", label: "Fortress", icon: "🏰", height: 70, desc: "Military stronghold, +5 defense",
+      colors: { top: "#455A64", accent: "#FF6F00", glow: "rgba(255,111,0,0.55)" } },
+    { id: "ruins",    label: "Ruins",    icon: "🏚️", height: 25, desc: "Unstable ground, hidden passages",
+      colors: { top: "#3E2723", accent: "#A5D6A7", glow: "rgba(165,214,167,0.4)" } },
   ],
   power: [
-    { id: "reactor",    label: "Reactor",    icon: "⚛️", height: 50 },
-    { id: "tower",      label: "Tower",      icon: "📡", height: 90 },
-    { id: "lab",        label: "Lab",        icon: "🔬", height: 40 },
-    { id: "vault",      label: "Vault",      icon: "🔒", height: 30 },
+    { id: "reactor",  label: "Reactor",  icon: "⚛️", height: 50, desc: "Energy source, radiation risk",
+      colors: { top: "#1C1C1C", accent: "#E040FB", glow: "rgba(224,64,251,0.65)" } },
+    { id: "tower",    label: "Tower",    icon: "📡", height: 90, desc: "Surveillance, +4 control radius",
+      colors: { top: "#1A1A2E", accent: "#00E5FF", glow: "rgba(0,229,255,0.55)" } },
+    { id: "lab",      label: "Lab",      icon: "🔬", height: 40, desc: "Research site, +2 intel/turn",
+      colors: { top: "#1B2A1B", accent: "#69F0AE", glow: "rgba(105,240,174,0.55)" } },
+    { id: "vault",    label: "Vault",    icon: "🔒", height: 30, desc: "Secured cache, high value target",
+      colors: { top: "#1A1A1A", accent: "#FFD700", glow: "rgba(255,215,0,0.55)" } },
   ],
   infrastructure: [
-    { id: "highway",    label: "Highway",    icon: "🛣️", height: 15 },
-    { id: "bridge",     label: "Bridge",     icon: "🌉", height: 35 },
-    { id: "port",       label: "Port",       icon: "⚓", height: 20 },
-    { id: "airport",    label: "Airport",    icon: "✈️", height: 25 },
+    { id: "highway",  label: "Highway",  icon: "🛣️", height: 15, desc: "Fast travel corridor",
+      colors: { top: "#37474F", accent: "#FFD740", glow: "rgba(255,215,64,0.45)" } },
+    { id: "bridge",   label: "Bridge",   icon: "🌉", height: 35, desc: "Crosses water, strategic chokepoint",
+      colors: { top: "#546E7A", accent: "#B0BEC5", glow: "rgba(176,190,197,0.45)" } },
+    { id: "port",     label: "Port",     icon: "⚓", height: 20, desc: "Naval access, supply lines",
+      colors: { top: "#01579B", accent: "#29B6F6", glow: "rgba(41,182,246,0.55)" } },
+    { id: "airport",  label: "Airport",  icon: "✈️", height: 25, desc: "Air transport hub",
+      colors: { top: "#263238", accent: "#90CAF9", glow: "rgba(144,202,249,0.5)" } },
   ],
 };
 
@@ -143,7 +160,7 @@ const PIECE_CATEGORIES = [
   { id: "infrastructure", label: "INFRA",         color: "#C9A84C" },
 ];
 
-// ── BLOB COLORS & LAYER POSITIONS ────────────────────────────────────
+// ── LAYER POSITIONS ───────────────────────────────────────────────────
 const BLOB_COLORS = {
   trauma:   { core: "rgba(0,212,255,0.7)",   mid: "rgba(0,150,200,0.3)"   },
   conflict: { core: "rgba(204,34,0,0.8)",    mid: "rgba(150,20,0,0.35)"   },
@@ -161,7 +178,7 @@ const LAYER_POSITIONS = {
   sensitivity: { cx: "50%", cy: "50%", rx: "55%", ry: "50%" },
 };
 
-// ── ANIMATION CSS ────────────────────────────────────────────────────
+// ── ANIMATION CSS ─────────────────────────────────────────────────────
 const animCSS = `
   @keyframes wpmRingPulse {
     0%   { transform: scale(0.85); opacity: 1; }
@@ -176,16 +193,142 @@ const animCSS = `
     to   { transform: translate(-50%, -50%) scale(1.03); opacity: 1;    }
   }
   @keyframes layerFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes layerPulse {
+    0%, 100% { opacity: 0.65; }
+    50%      { opacity: 1;    }
+  }
   @keyframes pieceDropIn {
-    from { opacity: 0; transform: translate(-50%, -60%) translateZ(120px) rotateZ(45deg) rotateX(-52deg); }
-    to   { opacity: 1; }
+    0%   { opacity: 0; transform: scale(0.5) translateY(-16px); }
+    65%  { transform: scale(1.12) translateY(0); }
+    82%  { transform: scale(0.96); }
+    100% { opacity: 1; transform: scale(1); }
   }
   .wpm-blob-conflict { animation-duration: 1.6s !important; }
   .wpm-blob-bio      { animation-duration: 4s   !important; }
   .wpm-blob-trauma   { animation-duration: 6s   !important; }
 `;
 
-// ── FLOATING CHARACTER ICON ───────────────────────────────────────────
+// ── PIECE THUMBNAIL ───────────────────────────────────────────────────
+const PieceThumb = ({ piece, size = 48 }) => (
+  <div style={{ position: "relative", width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+    {/* Diamond face */}
+    <div style={{
+      position: "absolute", inset: 0,
+      background: `linear-gradient(145deg, ${piece.colors.top} 0%, rgba(4,4,10,0.95) 100%)`,
+      clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
+    }} />
+    {/* Accent glow */}
+    <div style={{
+      position: "absolute", inset: 0,
+      background: `radial-gradient(circle at 38% 38%, ${piece.colors.accent}28 0%, transparent 65%)`,
+      clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
+    }} />
+    {/* Border glow */}
+    <div style={{
+      position: "absolute", inset: 1,
+      clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
+      boxShadow: `0 0 10px ${piece.colors.glow}`,
+      border: `1px solid ${piece.colors.accent}40`,
+    }} />
+    {/* Icon */}
+    <div style={{
+      position: "relative", zIndex: 1, fontSize: Math.round(size * 0.36), lineHeight: 1,
+      filter: `drop-shadow(0 0 4px ${piece.colors.glow})`,
+    }}>
+      {piece.icon}
+    </div>
+  </div>
+);
+
+// ── PIECE LIBRARY ─────────────────────────────────────────────────────
+const PieceLibrary = ({ onDragStart }) => {
+  const [openCat, setOpenCat] = React.useState("terrain");
+  const [tooltip, setTooltip] = React.useState(null);
+  return (
+    <div style={{ position: "relative" }}>
+      {PIECE_CATEGORIES.map(cat => (
+        <div key={cat.id}>
+          <button
+            onClick={() => setOpenCat(o => o === cat.id ? null : cat.id)}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              width: "100%", padding: "9px 18px", background: "transparent",
+              border: "none", borderBottom: "1px solid var(--iron)", cursor: "pointer",
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: cat.color, display: "inline-block" }} />
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.16em", color: cat.color }}>
+                {cat.label}
+              </span>
+            </span>
+            <span style={{ color: "var(--text-dim)", fontSize: 12 }}>{openCat === cat.id ? "−" : "+"}</span>
+          </button>
+          {openCat === cat.id && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "10px 12px 12px" }}>
+              {WORLD_PIECES[cat.id].map(piece => (
+                <div
+                  key={piece.id}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("pieceId", piece.id);
+                    e.dataTransfer.setData("pieceCategory", cat.id);
+                    e.currentTarget.style.opacity = "0.5";
+                    e.currentTarget.style.transform = "scale(1.08)";
+                    onDragStart(piece);
+                  }}
+                  onDragEnd={(e) => {
+                    e.currentTarget.style.opacity = "1";
+                    e.currentTarget.style.transform = "scale(1)";
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = piece.colors.accent + "55";
+                    e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+                    setTooltip(piece);
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
+                    e.currentTarget.style.background = "rgba(255,255,255,0.02)";
+                    setTooltip(null);
+                  }}
+                  style={{
+                    padding: "8px 6px 6px",
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10,
+                    cursor: "grab", textAlign: "center",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                    transition: "all 0.12s ease",
+                  }}
+                >
+                  <PieceThumb piece={piece} size={48} />
+                  <span style={{ fontSize: 10, color: "var(--text-secondary)", fontFamily: "var(--font-ui)", letterSpacing: "0.02em" }}>
+                    {piece.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+      {/* Hover tooltip */}
+      {tooltip && (
+        <div style={{
+          position: "fixed", bottom: 100, left: 16, right: 16,
+          background: "rgba(8,8,20,0.97)", border: `1px solid ${tooltip.colors.accent}40`,
+          borderLeft: `3px solid ${tooltip.colors.accent}`,
+          borderRadius: 8, padding: "8px 12px", zIndex: 200,
+          fontFamily: "var(--font-ui)",
+          boxShadow: `0 4px 16px rgba(0,0,0,0.7), 0 0 12px ${tooltip.colors.glow}`,
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#F0F0FF", marginBottom: 2 }}>{tooltip.label}</div>
+          <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{tooltip.desc}</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── FLOATING CHARACTER ICON ────────────────────────────────────────────
 const FloatingCharacterIcon = ({ char: c, col, row, isActive, onSelect, onDragStart }) => {
   const [hovered, setHovered] = React.useState(false);
   const x = col * TILE_W + TILE_W / 2;
@@ -215,13 +358,11 @@ const FloatingCharacterIcon = ({ char: c, col, row, isActive, onSelect, onDragSt
             animation: "wpmRingPulse 2s ease-out infinite",
           }} />
         )}
-        {/* Glow halo */}
         <div style={{
           position: "absolute", inset: -6, borderRadius: "50%",
           background: `radial-gradient(circle, rgba(${c.color},0.35) 0%, transparent 70%)`,
           filter: "blur(4px)", opacity: isActive ? 1 : 0.4,
         }} />
-        {/* Glass bubble */}
         <div style={{
           position: "relative", width: 44, height: 44, borderRadius: "50%",
           overflow: "hidden",
@@ -237,14 +378,12 @@ const FloatingCharacterIcon = ({ char: c, col, row, isActive, onSelect, onDragSt
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
             onError={(e) => { e.currentTarget.style.display = "none"; }}
           />
-          {/* Glass sheen */}
           <div style={{
             position: "absolute", top: 0, left: 0, right: 0, height: "55%",
             background: "linear-gradient(to bottom, rgba(255,255,255,0.18), transparent)",
             borderRadius: "50% 50% 0 0", pointerEvents: "none",
           }} />
         </div>
-        {/* Status dot */}
         <div style={{
           position: "absolute", bottom: -1, right: -1,
           width: 10, height: 10, borderRadius: "50%",
@@ -252,8 +391,6 @@ const FloatingCharacterIcon = ({ char: c, col, row, isActive, onSelect, onDragSt
           boxShadow: c.status === "active" ? `0 0 8px ${statusDot}` : "none",
         }} />
       </div>
-
-      {/* Hover tooltip */}
       {hovered && (
         <div style={{
           position: "absolute", bottom: 52, left: "50%",
@@ -272,7 +409,7 @@ const FloatingCharacterIcon = ({ char: c, col, row, isActive, onSelect, onDragSt
   );
 };
 
-// ── PLACED PIECE ─────────────────────────────────────────────────────
+// ── PLACED PIECE ──────────────────────────────────────────────────────
 const PlacedPiece = ({ piece, col, row }) => {
   const x = col * TILE_W + TILE_W / 2;
   const y = row * TILE_H + TILE_H / 2;
@@ -282,84 +419,24 @@ const PlacedPiece = ({ piece, col, row }) => {
       transform: `translate(-50%, -50%) translateZ(${piece.height || 30}px) rotateZ(45deg) rotateX(-52deg)`,
       transformStyle: "preserve-3d",
       pointerEvents: "none",
-      animation: "pieceDropIn 0.35s cubic-bezier(0.34,1.56,0.64,1) backwards",
     }}>
-      <div style={{ fontSize: 22, textAlign: "center", filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.9))" }}>
-        {piece.icon}
-      </div>
-      <div style={{
-        fontSize: 9, color: "rgba(255,255,255,0.45)", textAlign: "center",
-        fontFamily: "var(--font-ui)", letterSpacing: "0.04em", marginTop: 1,
-      }}>{piece.label}</div>
-    </div>
-  );
-};
-
-// ── PIECE LIBRARY ────────────────────────────────────────────────────
-const PieceLibrary = ({ onDragStart }) => {
-  const [openCat, setOpenCat] = React.useState("terrain");
-  return (
-    <div>
-      {PIECE_CATEGORIES.map(cat => (
-        <div key={cat.id}>
-          <button
-            onClick={() => setOpenCat(o => o === cat.id ? null : cat.id)}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              width: "100%", padding: "9px 18px", background: "transparent",
-              border: "none", borderBottom: "1px solid var(--iron)", cursor: "pointer",
-            }}
-          >
-            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: cat.color, display: "inline-block" }} />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.16em", color: cat.color }}>
-                {cat.label}
-              </span>
-            </span>
-            <span style={{ color: "var(--text-dim)", fontSize: 12 }}>{openCat === cat.id ? "−" : "+"}</span>
-          </button>
-          {openCat === cat.id && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, padding: "8px 12px 10px" }}>
-              {WORLD_PIECES[cat.id].map(piece => (
-                <div
-                  key={piece.id}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData("pieceId", piece.id);
-                    e.dataTransfer.setData("pieceCategory", cat.id);
-                    onDragStart(piece);
-                  }}
-                  style={{
-                    padding: "8px 4px", background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.07)", borderRadius: 8,
-                    cursor: "grab", textAlign: "center",
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-                    transition: "all 0.12s ease",
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = "rgba(255,255,255,0.06)";
-                    e.currentTarget.style.borderColor = cat.color + "44";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = "rgba(255,255,255,0.03)";
-                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
-                  }}
-                >
-                  <span style={{ fontSize: 20 }}>{piece.icon}</span>
-                  <span style={{ fontSize: 10, color: "var(--text-secondary)", fontFamily: "var(--font-ui)" }}>
-                    {piece.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+      <div style={{ animation: "pieceDropIn 0.4s cubic-bezier(0.34,1.56,0.64,1) backwards" }}>
+        <div style={{
+          fontSize: 22, textAlign: "center",
+          filter: `drop-shadow(0 4px 12px ${piece.colors?.glow || "rgba(0,0,0,0.9)"})`,
+        }}>
+          {piece.icon}
         </div>
-      ))}
+        <div style={{
+          fontSize: 9, color: "rgba(255,255,255,0.45)", textAlign: "center",
+          fontFamily: "var(--font-ui)", letterSpacing: "0.04em", marginTop: 1,
+        }}>{piece.label}</div>
+      </div>
     </div>
   );
 };
 
-// ── PRESSURE BLOBS ───────────────────────────────────────────────────
+// ── PRESSURE BLOBS ────────────────────────────────────────────────────
 const PressureBlobsLayer = ({ blobs, selectedId, onSelect }) => (
   <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 2 }}>
     {blobs.map((blob, index) => {
@@ -394,12 +471,12 @@ const PressureBlobsLayer = ({ blobs, selectedId, onSelect }) => (
   </div>
 );
 
-// ── LAYER MAP OVERLAYS ───────────────────────────────────────────────
+// ── LAYER MAP OVERLAYS ────────────────────────────────────────────────
 const LayerMapOverlay = ({ layer }) => {
   const pos = LAYER_POSITIONS[layer.id] || LAYER_POSITIONS.social;
   const gradId = `layer-grad-${layer.id}`;
   return (
-    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 3, animation: "layerFadeIn 0.4s ease forwards" }}>
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 3, animation: "layerFadeIn 0.3s ease forwards" }}>
       <svg width="100%" height="100%" style={{ position: "absolute", inset: 0 }}>
         <defs>
           <radialGradient id={gradId} cx={pos.cx} cy={pos.cy} r="50%">
@@ -413,7 +490,7 @@ const LayerMapOverlay = ({ layer }) => {
   );
 };
 
-// ── LAYER PANEL ──────────────────────────────────────────────────────
+// ── LAYER PANEL ───────────────────────────────────────────────────────
 const LayerPanel = ({ layers, onToggle, mapMode, onModeChange, open, onToggleOpen }) => {
   const activeLayers = layers.filter(l => l.active);
   return (
@@ -440,7 +517,7 @@ const LayerPanel = ({ layers, onToggle, mapMode, onModeChange, open, onToggleOpe
             padding: "1px 7px",
           }}>{activeLayers.length}</span>
         </div>
-        <span style={{ color: "#6B6B8A", fontSize: 14, lineHeight: 1 }}>{open ? "−" : "+"}</span>
+        <span style={{ color: "#6B6B8A", fontSize: 16, lineHeight: 1, fontWeight: 300 }}>{open ? "−" : "+"}</span>
       </button>
 
       {open && (
@@ -452,8 +529,7 @@ const LayerPanel = ({ layers, onToggle, mapMode, onModeChange, open, onToggleOpe
                 padding: "7px 0",
                 background: mapMode === mode.id ? "rgba(0,201,167,0.08)" : "transparent",
                 border: `1px solid ${mapMode === mode.id ? "#00C9A7" : "#1A1A2E"}`,
-                borderRadius: 8,
-                color: mapMode === mode.id ? "#00C9A7" : "#6B6B8A",
+                borderRadius: 8, color: mapMode === mode.id ? "#00C9A7" : "#6B6B8A",
                 fontSize: 10, fontWeight: 600, letterSpacing: "0.08em",
                 cursor: "pointer", fontFamily: "var(--font-ui)",
               }}>
@@ -464,7 +540,6 @@ const LayerPanel = ({ layers, onToggle, mapMode, onModeChange, open, onToggleOpe
 
           <div style={{ height: 1, background: "#1A1A2E", marginBottom: 12 }} />
 
-          {/* Layer list header */}
           <div style={{
             fontSize: 10, color: "#6B6B8A", letterSpacing: "0.1em", textTransform: "uppercase",
             marginBottom: 8, display: "flex", justifyContent: "space-between",
@@ -476,7 +551,6 @@ const LayerPanel = ({ layers, onToggle, mapMode, onModeChange, open, onToggleOpe
             >CLEAR</button>
           </div>
 
-          {/* Circle toggles */}
           {layers.map((layer, index) => (
             <div key={layer.id}
               style={{
@@ -486,12 +560,14 @@ const LayerPanel = ({ layers, onToggle, mapMode, onModeChange, open, onToggleOpe
               }}
               onClick={() => onToggle(layer.id, !layer.active)}
             >
+              {/* Pulsing dot */}
               <div style={{
                 width: 15, height: 15, borderRadius: "50%", flexShrink: 0,
                 border: `2px solid ${layer.active ? layer.color : "#3A3A5C"}`,
                 background: layer.active ? layer.color : "transparent",
                 transition: "all 0.15s ease",
                 display: "flex", alignItems: "center", justifyContent: "center",
+                animation: layer.active ? "layerPulse 2s ease-in-out infinite" : "none",
               }}>
                 {layer.active && <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#080810" }} />}
               </div>
@@ -500,13 +576,16 @@ const LayerPanel = ({ layers, onToggle, mapMode, onModeChange, open, onToggleOpe
                 color: layer.active ? "#F0F0FF" : "#6B6B8A",
                 transition: "color 0.15s ease", fontFamily: "var(--font-ui)",
               }}>{layer.label}</div>
+              {/* Pulsing bar */}
               {layer.active && (
-                <div style={{ width: 3, height: 18, borderRadius: 2, background: layer.color, flexShrink: 0 }} />
+                <div style={{
+                  width: 3, height: 18, borderRadius: 2, background: layer.color, flexShrink: 0,
+                  animation: "layerPulse 2s ease-in-out infinite",
+                }} />
               )}
             </div>
           ))}
 
-          {/* Stacked GIS preview */}
           {activeLayers.length > 0 && (
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #1A1A2E" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -534,7 +613,7 @@ const LayerPanel = ({ layers, onToggle, mapMode, onModeChange, open, onToggleOpe
   );
 };
 
-// ── ZOOM CONTROLS ────────────────────────────────────────────────────
+// ── ZOOM CONTROLS ─────────────────────────────────────────────────────
 const zoomBtnStyle = {
   width: 40, height: 34,
   background: "rgba(15,15,26,0.9)", border: "1px solid var(--iron)",
@@ -543,24 +622,24 @@ const zoomBtnStyle = {
   fontSize: 18, fontFamily: "var(--font-mono)", transition: "all 120ms ease",
 };
 
-const ZoomControls = ({ zoom, onZoom, onReset }) => (
+const ZoomControls = ({ zoom, onZoomIn, onZoomOut, onReset }) => (
   <div style={{
     position: "absolute", right: 18, bottom: 108,
     display: "flex", flexDirection: "column", gap: 5, zIndex: 25, alignItems: "center",
   }}>
-    <button style={zoomBtnStyle} onClick={() => onZoom(z => Math.min(2.5, z + 0.2))}>+</button>
+    <button style={zoomBtnStyle} onClick={onZoomIn}>+</button>
     <div style={{
       width: 40, padding: "4px 0",
       background: "rgba(15,15,26,0.9)", border: "1px solid var(--iron)", borderRadius: 7,
       fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-dim)",
       textAlign: "center", letterSpacing: "0.04em",
     }}>{Math.round(zoom * 100)}%</div>
-    <button style={zoomBtnStyle} onClick={() => onZoom(z => Math.max(0.2, z - 0.2))}>−</button>
+    <button style={zoomBtnStyle} onClick={onZoomOut}>−</button>
     <button style={{ ...zoomBtnStyle, marginTop: 4, fontSize: 14 }} onClick={onReset} title="Reset view">⌖</button>
   </div>
 );
 
-// ── STAMP SECTION ────────────────────────────────────────────────────
+// ── STAMP SECTION ─────────────────────────────────────────────────────
 const StampSection = ({ cat, selectedId, onSelect, expanded }) => {
   const [open, setOpen] = React.useState(true);
   if (!expanded) {
@@ -615,7 +694,7 @@ const StampSection = ({ cat, selectedId, onSelect, expanded }) => {
   );
 };
 
-// ── STAMP ICONS SVG ──────────────────────────────────────────────────
+// ── STAMP ICONS SVG ───────────────────────────────────────────────────
 const PressureIconsSVG = ({ blobs, cursorPos, previewStamp }) => (
   <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 5 }}>
     {blobs.map(b => (
@@ -649,7 +728,7 @@ const PressureIconsSVG = ({ blobs, cursorPos, previewStamp }) => (
   </svg>
 );
 
-// ── STAMP DETAIL CARD ────────────────────────────────────────────────
+// ── HELPERS ───────────────────────────────────────────────────────────
 const Row = ({ label, children }) => (
   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
     <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", letterSpacing: "0.18em", color: "var(--text-dim)", textTransform: "uppercase" }}>{label}</span>
@@ -681,6 +760,7 @@ const btnStyle = (kind) => ({
   borderRadius: 8, cursor: "pointer", transition: "all 160ms ease",
 });
 
+// ── STAMP DETAIL CARD ─────────────────────────────────────────────────
 const StampDetailCard = ({ blob, onClose, onRemove }) => {
   const blobRgb = blob.color;
   const blobSolid = `rgb(${blobRgb})`;
@@ -723,7 +803,7 @@ const StampDetailCard = ({ blob, onClose, onRemove }) => {
           <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", letterSpacing: "0.18em", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: 8 }}>
             Affected
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {blob.characters.map(name => (
               <span key={name} style={{
                 fontSize: 11, padding: "2px 10px", borderRadius: 999,
@@ -741,8 +821,8 @@ const StampDetailCard = ({ blob, onClose, onRemove }) => {
   );
 };
 
-// ── PRESENCE STRIP ───────────────────────────────────────────────────
-const PresenceStrip = ({ chars, activeChar, onSelect }) => {
+// ── PRESENCE STRIP ────────────────────────────────────────────────────
+const PresenceStrip = ({ chars, activeChar, onSelect, leftOpen }) => {
   const cityMap = { kal: "Metropolis", bruce: "Gotham", diana: "Themyscira", lois: "Metropolis", jon: "Smallville" };
   return (
     <div style={{
@@ -750,7 +830,9 @@ const PresenceStrip = ({ chars, activeChar, onSelect }) => {
       background: "linear-gradient(to top, rgba(4,4,10,0.96), rgba(4,4,10,0.5))",
       backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
       borderTop: "1px solid var(--iron)", display: "flex", alignItems: "center",
-      gap: 0, padding: "0 22px 0 280px", overflowX: "auto", zIndex: 20,
+      gap: 0, paddingLeft: leftOpen ? 290 : 22, paddingRight: 22,
+      transition: "padding-left 200ms ease",
+      overflowX: "auto", zIndex: 20,
     }}>
       {chars.map(c => {
         const isActive = c.id === activeChar;
@@ -794,44 +876,84 @@ const PresenceStrip = ({ chars, activeChar, onSelect }) => {
   );
 };
 
-// ── MAIN COMPONENT ───────────────────────────────────────────────────
+// ── MAIN COMPONENT ────────────────────────────────────────────────────
 const WorldMap = () => {
-  const [mapMode, setMapMode]           = React.useState("pressure");
-  const [layers, setLayers]             = React.useState(LAYERS_DATA);
+  const [mapMode, setMapMode]               = React.useState("pressure");
+  const [layers, setLayers]                 = React.useState(LAYERS_DATA);
   const [layerPanelOpen, setLayerPanelOpen] = React.useState(true);
-  const [leftTab, setLeftTab]           = React.useState("stamps");
-  const [leftExpanded, setLeftExpanded] = React.useState(true);
-  const [zoom, setZoom]                 = React.useState(0.45);
-  const [pan, setPan]                   = React.useState({ x: -320, y: -420 });
-  const [isPanning, setIsPanning]       = React.useState(false);
-  const [selectedStamp, setSelectedStamp] = React.useState(null);
-  const [blobs, setBlobs]               = React.useState(INITIAL_BLOBS);
-  const [selectedBlob, setSelectedBlob] = React.useState(null);
-  const [activeChar, setActiveChar]     = React.useState("kal");
-  const [cursorPos, setCursorPos]       = React.useState(null);
+  const [leftTab, setLeftTab]               = React.useState("elements");
+  const [leftOpen, setLeftOpen]             = React.useState(true);
+  const [zoom, setZoom]                     = React.useState(0.45);
+  const [pan, setPan]                       = React.useState({ x: -320, y: -420 });
+  const [isPanning, setIsPanning]           = React.useState(false);
+  const [selectedStamp, setSelectedStamp]   = React.useState(null);
+  const [blobs, setBlobs]                   = React.useState(INITIAL_BLOBS);
+  const [selectedBlob, setSelectedBlob]     = React.useState(null);
+  const [activeChar, setActiveChar]         = React.useState("kal");
+  const [cursorPos, setCursorPos]           = React.useState(null);
   const [characterPositions, setCharacterPositions] = React.useState(() => {
     const init = {};
     CHARACTERS_MAP.forEach(c => { init[c.id] = { col: c.col, row: c.row }; });
     return init;
   });
-  const [placedPieces, setPlacedPieces]     = React.useState([]);
+  const [placedPieces, setPlacedPieces]       = React.useState([]);
   const [highlightedTile, setHighlightedTile] = React.useState(null);
   const [draggingCharId, setDraggingCharId]   = React.useState(null);
   const [draggingPiece, setDraggingPiece]     = React.useState(null);
 
   const mapOuterRef = React.useRef(null);
-  const panRef = React.useRef({ active: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 });
+  const panRef      = React.useRef({ active: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 });
+  // Sync ref so wheel handler doesn't go stale
+  const stateRef    = React.useRef({ zoom: 0.45, pan: { x: -320, y: -420 } });
+  React.useEffect(() => { stateRef.current.zoom = zoom; }, [zoom]);
+  React.useEffect(() => { stateRef.current.pan  = pan;  }, [pan]);
 
-  // Wheel zoom
+  // Wheel zoom — zooms toward cursor position
   React.useEffect(() => {
     const el = mapOuterRef.current;
     if (!el) return;
     const onWheel = (e) => {
       e.preventDefault();
-      setZoom(z => Math.min(2.5, Math.max(0.2, z - e.deltaY * 0.0008)));
+      const rect = el.getBoundingClientRect();
+      const { zoom: z1, pan: p } = stateRef.current;
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const z2 = Math.min(2.0, Math.max(0.5, +(z1 + delta).toFixed(2)));
+      if (z2 === z1) return;
+      const originX = rect.width  * 0.5;
+      const originY = rect.height * 0.45;
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      const worldX = (cx - originX - p.x) / z1;
+      const worldY = (cy - originY - p.y) / z1;
+      const newPan = {
+        x: cx - originX - worldX * z2,
+        y: cy - originY - worldY * z2,
+      };
+      stateRef.current = { zoom: z2, pan: newPan };
+      setZoom(z2);
+      setPan(newPan);
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // Zoom from viewport center (buttons)
+  const applyZoom = React.useCallback((delta) => {
+    if (!mapOuterRef.current) return;
+    const rect = mapOuterRef.current.getBoundingClientRect();
+    const { zoom: z1, pan: p } = stateRef.current;
+    const z2 = Math.min(2.0, Math.max(0.5, +(z1 + delta).toFixed(2)));
+    if (z2 === z1) return;
+    const originX = rect.width  * 0.5;
+    const originY = rect.height * 0.45;
+    const cx = rect.width  * 0.5;
+    const cy = rect.height * 0.5;
+    const worldX = (cx - originX - p.x) / z1;
+    const worldY = (cy - originY - p.y) / z1;
+    const newPan = { x: cx - originX - worldX * z2, y: cy - originY - worldY * z2 };
+    stateRef.current = { zoom: z2, pan: newPan };
+    setZoom(z2);
+    setPan(newPan);
   }, []);
 
   const activeLayers = layers.filter(l => l.active);
@@ -840,7 +962,6 @@ const WorldMap = () => {
     setLayers(prev => prev.map(l => l.id === id ? { ...l, active } : l));
   }, []);
 
-  // Pan handlers
   const handlePanStart = (e) => {
     if (e.button !== 0 || selectedStamp) return;
     if (e.target.closest('[draggable="true"]')) return;
@@ -848,32 +969,31 @@ const WorldMap = () => {
     setIsPanning(true);
   };
 
-  const handlePanMove = (e) => {
+  const handleMouseMove = (e) => {
     if (panRef.current.active) {
-      setPan({
+      const newPan = {
         x: panRef.current.startPanX + (e.clientX - panRef.current.startX),
         y: panRef.current.startPanY + (e.clientY - panRef.current.startY),
-      });
+      };
+      setPan(newPan);
+      stateRef.current.pan = newPan;
     }
     if (selectedStamp && mapOuterRef.current) {
       const rect = mapOuterRef.current.getBoundingClientRect();
       setCursorPos({
-        x: ((e.clientX - rect.left) / rect.width) * 100,
-        y: ((e.clientY - rect.top) / rect.height) * 100,
+        x: ((e.clientX - rect.left) / rect.width)  * 100,
+        y: ((e.clientY - rect.top)  / rect.height) * 100,
       });
     }
   };
 
-  const handlePanEnd = () => {
-    panRef.current.active = false;
-    setIsPanning(false);
-  };
+  const handlePanEnd = () => { panRef.current.active = false; setIsPanning(false); };
 
   const handleMapClick = (e) => {
     if (!selectedStamp || !mapOuterRef.current) return;
     const rect = mapOuterRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    const x = ((e.clientX - rect.left) / rect.width)  * 100;
+    const y = ((e.clientY - rect.top)  / rect.height) * 100;
     const newBlob = {
       id: `u${Date.now()}`, kind: selectedStamp.id,
       label: selectedStamp.label, x, y,
@@ -901,8 +1021,7 @@ const WorldMap = () => {
 
   const removeBlob = (id) => { setBlobs(b => b.filter(x => x.id !== id)); setSelectedBlob(null); };
 
-  // Left panel style
-  const leftPanelWidth = leftExpanded ? 272 : 64;
+  const PANEL_W = 272;
 
   return (
     <div style={{ flex: 1, height: "100vh", position: "relative", overflow: "hidden", background: "#04040A", fontFamily: "var(--font-ui)" }}>
@@ -916,7 +1035,7 @@ const WorldMap = () => {
           cursor: selectedStamp ? "crosshair" : isPanning ? "grabbing" : "grab",
         }}
         onMouseDown={handlePanStart}
-        onMouseMove={handlePanMove}
+        onMouseMove={handleMouseMove}
         onMouseUp={handlePanEnd}
         onMouseLeave={handlePanEnd}
         onClick={handleMapClick}
@@ -954,10 +1073,11 @@ const WorldMap = () => {
                     style={{
                       position: "absolute", left: c * TILE_W, top: r * TILE_H,
                       width: TILE_W, height: TILE_H,
-                      background: isHl ? "rgba(0,212,170,0.28)" : t.fill,
-                      border: `1px solid ${isHl ? "rgba(0,212,170,0.8)" : t.border}`,
+                      background: isHl ? t.hl : t.fill,
+                      border: `1px solid ${isHl ? t.hlBorder : t.border}`,
                       boxSizing: "border-box",
-                      transition: "background 0.08s ease",
+                      boxShadow: isHl ? `inset 0 0 12px rgba(0,229,255,0.15)` : "none",
+                      transition: "background 0.08s ease, border-color 0.08s ease, box-shadow 0.08s ease",
                     }}
                     onMouseEnter={() => { if (!selectedStamp) setHighlightedTile({ col: c, row: r }); }}
                     onMouseLeave={() => setHighlightedTile(null)}
@@ -977,10 +1097,8 @@ const WorldMap = () => {
                 const pos = characterPositions[c.id] || { col: c.col, row: c.row };
                 return (
                   <FloatingCharacterIcon
-                    key={c.id}
-                    char={c}
-                    col={pos.col}
-                    row={pos.row}
+                    key={c.id} char={c}
+                    col={pos.col} row={pos.row}
                     isActive={c.id === activeChar}
                     onSelect={() => setActiveChar(c.id)}
                     onDragStart={() => setDraggingCharId(c.id)}
@@ -993,21 +1111,18 @@ const WorldMap = () => {
 
         {/* SCREEN-SPACE OVERLAYS */}
         {activeLayers.map(layer => <LayerMapOverlay key={layer.id} layer={layer} />)}
-
         {mapMode === "pressure" && (
           <PressureBlobsLayer
-            blobs={blobs}
-            selectedId={selectedBlob?.id}
+            blobs={blobs} selectedId={selectedBlob?.id}
             onSelect={(b) => { setSelectedBlob(b); setSelectedStamp(null); }}
           />
         )}
-
         <PressureIconsSVG blobs={mapMode === "pressure" ? blobs : []} cursorPos={cursorPos} previewStamp={selectedStamp} />
 
         {/* Vignette */}
         <div style={{
           position: "absolute", inset: 0, pointerEvents: "none", zIndex: 10,
-          background: "radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(0,0,0,0.65) 100%)",
+          background: "radial-gradient(ellipse 75% 75% at 50% 50%, transparent 35%, rgba(0,0,0,0.72) 100%)",
         }}/>
         {/* Film grain */}
         <div style={{
@@ -1017,69 +1132,76 @@ const WorldMap = () => {
       </div>
 
       {/* LEFT PANEL */}
-      <div
-        style={{
-          position: "absolute", top: 0, bottom: 0, left: 0,
-          width: leftPanelWidth,
-          background: "rgba(8,8,16,0.92)", backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)", borderRight: "1px solid var(--iron)",
-          zIndex: 40, transition: "width 220ms cubic-bezier(0.4,0,0.2,1)",
-          display: "flex", flexDirection: "column", overflow: "hidden",
-        }}
-        onMouseEnter={() => setLeftExpanded(true)}
-        onMouseLeave={() => setLeftExpanded(false)}
-      >
+      <div style={{
+        position: "absolute", top: 0, bottom: 0, left: 0,
+        width: PANEL_W,
+        background: "rgba(8,8,16,0.94)", backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)", borderRight: "1px solid var(--iron)",
+        zIndex: 40, display: "flex", flexDirection: "column", overflow: "hidden",
+        transform: leftOpen ? "translateX(0)" : `translateX(-${PANEL_W}px)`,
+        transition: "transform 200ms ease",
+      }}>
         {/* Tabs */}
         <div style={{ display: "flex", borderBottom: "1px solid var(--iron)", flexShrink: 0 }}>
-          {[{ id: "stamps", label: "EVENTS", icon: "⚡" }, { id: "pieces", label: "PIECES", icon: "🧩" }].map(tab => (
+          {[{ id: "events", label: "EVENTS" }, { id: "elements", label: "ELEMENTS" }].map(tab => (
             <button key={tab.id} onClick={() => setLeftTab(tab.id)} style={{
-              flex: 1, padding: "12px 4px", background: "transparent",
-              border: "none", borderBottom: `2px solid ${leftTab === tab.id ? "var(--krypton)" : "transparent"}`,
+              flex: 1, padding: "13px 4px",
+              background: "transparent", border: "none",
+              borderBottom: `2px solid ${leftTab === tab.id ? "var(--krypton)" : "transparent"}`,
               color: leftTab === tab.id ? "var(--krypton)" : "var(--text-dim)",
-              fontFamily: "var(--font-mono)", fontSize: leftExpanded ? 9 : 14,
-              letterSpacing: leftExpanded ? "0.15em" : 0,
+              fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.15em",
               textTransform: "uppercase", cursor: "pointer", transition: "all 0.15s ease",
             }}>
-              {leftExpanded ? tab.label : tab.icon}
+              {tab.label}
             </button>
           ))}
         </div>
 
         {/* Tab body */}
         <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
-          {leftTab === "stamps" ? (
+          {leftTab === "events" ? (
             <>
               {STAMP_CATEGORIES.map(cat => (
-                <StampSection key={cat.id} cat={cat} expanded={leftExpanded}
+                <StampSection key={cat.id} cat={cat} expanded={true}
                   selectedId={selectedStamp?.id} onSelect={setSelectedStamp}/>
               ))}
-              {leftExpanded && (
-                <div style={{ padding: "10px 14px 4px" }}>
-                  <button style={{
-                    width: "100%", padding: "10px 12px", background: "transparent",
-                    border: "1px dashed var(--iron)", borderRadius: 8,
-                    color: "var(--text-secondary)", fontSize: 11, fontFamily: "var(--font-ui)",
-                    letterSpacing: "0.04em", cursor: "pointer", transition: "all 160ms ease",
-                  }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--krypton)"; e.currentTarget.style.color = "var(--krypton)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--iron)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
-                  >+ Make your own event</button>
-                </div>
-              )}
+              <div style={{ padding: "10px 14px 4px" }}>
+                <button style={{
+                  width: "100%", padding: "10px 12px", background: "transparent",
+                  border: "1px dashed var(--iron)", borderRadius: 8,
+                  color: "var(--text-secondary)", fontSize: 11, fontFamily: "var(--font-ui)",
+                  letterSpacing: "0.04em", cursor: "pointer", transition: "all 160ms ease",
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--krypton)"; e.currentTarget.style.color = "var(--krypton)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--iron)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+                >+ Make your own event</button>
+              </div>
             </>
           ) : (
-            leftExpanded
-              ? <PieceLibrary onDragStart={setDraggingPiece} />
-              : (
-                <div style={{ padding: "16px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-                  {["⛰️", "🏙️", "⚛️", "🛣️"].map((icon, i) => (
-                    <span key={i} style={{ fontSize: 18 }}>{icon}</span>
-                  ))}
-                </div>
-              )
+            <PieceLibrary onDragStart={setDraggingPiece} />
           )}
         </div>
       </div>
+
+      {/* PANEL COLLAPSE CHEVRON — always accessible */}
+      <button
+        onClick={() => setLeftOpen(o => !o)}
+        style={{
+          position: "absolute", top: "50%",
+          left: leftOpen ? PANEL_W - 1 : 0,
+          transform: "translateY(-50%)",
+          transition: "left 200ms ease",
+          zIndex: 45, width: 20, height: 48,
+          background: "rgba(8,8,16,0.94)",
+          border: "1px solid var(--iron)", borderLeft: leftOpen ? "none" : "1px solid var(--iron)",
+          borderRadius: leftOpen ? "0 8px 8px 0" : "0 8px 8px 0",
+          color: "var(--text-secondary)", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 11, lineHeight: 1,
+        }}
+      >
+        {leftOpen ? "‹" : "›"}
+      </button>
 
       {/* LAYER PANEL */}
       <LayerPanel
@@ -1089,7 +1211,16 @@ const WorldMap = () => {
       />
 
       {/* ZOOM CONTROLS */}
-      <ZoomControls zoom={zoom} onZoom={setZoom} onReset={() => { setZoom(0.45); setPan({ x: -320, y: -420 }); }} />
+      <ZoomControls
+        zoom={zoom}
+        onZoomIn={() => applyZoom(+0.1)}
+        onZoomOut={() => applyZoom(-0.1)}
+        onReset={() => {
+          const z2 = 0.45, newPan = { x: -320, y: -420 };
+          stateRef.current = { zoom: z2, pan: newPan };
+          setZoom(z2); setPan(newPan);
+        }}
+      />
 
       {/* COMPASS */}
       <div style={{
@@ -1097,7 +1228,6 @@ const WorldMap = () => {
         background: "rgba(15,15,26,0.85)", backdropFilter: "blur(8px)",
         border: "1px solid var(--iron)", borderRadius: "50%", zIndex: 25,
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "var(--font-mono)", fontSize: 10,
       }}>
         <div style={{ position: "relative", width: 26, height: 26 }}>
           <div style={{ position: "absolute", left: "50%", top: 2, transform: "translateX(-50%)", color: "var(--krypton)", fontSize: 9, fontWeight: 600 }}>N</div>
@@ -1112,7 +1242,7 @@ const WorldMap = () => {
       )}
 
       {/* PRESENCE STRIP */}
-      <PresenceStrip chars={CHARACTERS_MAP} activeChar={activeChar} onSelect={setActiveChar} />
+      <PresenceStrip chars={CHARACTERS_MAP} activeChar={activeChar} onSelect={setActiveChar} leftOpen={leftOpen} />
 
       {/* STAMP PLACEMENT LABEL */}
       {selectedStamp && (
