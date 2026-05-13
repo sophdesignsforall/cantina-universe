@@ -233,6 +233,7 @@ const animCSS = `
   }
   @keyframes layerFadeIn { from { opacity: 0; } to { opacity: 1; } }
   @keyframes layerPulse  { 0%,100% { opacity: 0.65; } 50% { opacity: 1; } }
+  @keyframes spin        { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   @keyframes pieceDropIn {
     0%   { opacity: 0; transform: translateY(-18px) scale(0.6); }
     65%  { transform: translateY(2px) scale(1.1); }
@@ -741,30 +742,202 @@ const CharacterIcon = ({ char: c, screenX, screenY, isActive, onSelect, onDragSt
 };
 
 // ── PLACED PIECE (flat, positioned via isoToScreen) ────────────────────
-const PlacedPiece = ({ piece, col, row }) => {
+const PlacedPiece = ({ piece, col, row, isSelected, onClick, customName }) => {
   const { x, y } = isoToScreen(col, row);
-  // Position SVG so that SVG y=40 aligns with the tile's top vertex (screen y),
-  // and SVG y=60 aligns with the tile's face center (screen y + TILE_H/2).
-  // This lets PieceThumbArt render features rising from the tile surface upward.
   const svgH = 88;
+  const accent = piece.colors?.accent || "#7040FF";
+  const glow   = piece.colors?.glow   || "rgba(110,65,255,0.6)";
   return (
-    <div style={{
-      position: "absolute",
-      left: x,
-      top: y - 40,
-      width: TILE_W,
-      pointerEvents: "none",
-      zIndex: 15,
-      animation: "pieceDropIn 0.4s cubic-bezier(0.34,1.56,0.64,1) backwards",
-    }}>
-      <svg width={TILE_W} height={svgH} style={{ overflow: "visible", display: "block" }}>
+    <div
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      style={{
+        position: "absolute", left: x, top: y - 40, width: TILE_W,
+        pointerEvents: "auto", cursor: "pointer", zIndex: isSelected ? 25 : 15,
+        animation: "pieceDropIn 0.4s cubic-bezier(0.34,1.56,0.64,1) backwards",
+      }}
+    >
+      {isSelected && (
+        <div style={{
+          position: "absolute", left: "50%", top: svgH - 6, transform: "translateX(-50%)",
+          width: 60, height: 14, borderRadius: "50%",
+          background: `radial-gradient(ellipse, ${glow} 0%, transparent 70%)`,
+          pointerEvents: "none",
+        }}/>
+      )}
+      <svg width={TILE_W} height={svgH} style={{
+        overflow: "visible", display: "block",
+        filter: isSelected ? `drop-shadow(0 0 7px ${accent})` : "none",
+        transition: "filter 0.15s",
+      }}>
         <PieceThumbArt id={piece.id} cx={TILE_W / 2} ty={40} cy={60} />
       </svg>
       <div style={{
-        fontSize: 8, color: "rgba(255,255,255,0.45)", textAlign: "center",
-        fontFamily: "var(--font-ui)", letterSpacing: "0.05em", marginTop: -8,
-        textShadow: "0 1px 4px rgba(0,0,0,1)",
-      }}>{piece.label}</div>
+        fontSize: 8, textAlign: "center", fontFamily: "var(--font-ui)", letterSpacing: "0.05em",
+        marginTop: -8, textShadow: "0 1px 4px rgba(0,0,0,1)", transition: "color 0.15s",
+        color: isSelected ? accent : "rgba(255,255,255,0.45)",
+      }}>{customName || piece.label}</div>
+    </div>
+  );
+};
+
+// ── PIECE DETAIL CARD ─────────────────────────────────────────────────
+const PieceDetailCard = ({ piece, details, leftOffset, onClose, onRemove, onUpdate }) => {
+  const [editingName, setEditingName] = React.useState(false);
+  const [name, setName]               = React.useState(details.name || piece.label);
+  const [desc, setDesc]               = React.useState(details.description || "");
+  const [aiLoading, setAiLoading]     = React.useState(false);
+  const [showKey, setShowKey]         = React.useState(false);
+  const [keyInput, setKeyInput]       = React.useState("");
+
+  const accent = piece.colors?.accent || "#7040FF";
+  const glow   = piece.colors?.glow   || "rgba(110,65,255,0.5)";
+
+  const commit = (n, d) => onUpdate({ name: n ?? name, description: d ?? desc });
+
+  const saveName = () => { setEditingName(false); commit(name, null); };
+
+  const handleAI = async () => {
+    const key = localStorage.getItem("anthropic-key");
+    if (!key) { setShowKey(true); return; }
+    setAiLoading(true);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": key,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 180,
+          messages: [{ role: "user", content:
+            `Cantina Universe — dark sci-fi/fantasy world simulation.\n` +
+            `Write 2–3 sentences of vivid strategic lore for: "${name}" (type: ${piece.id}, ${piece.desc || ""}).\n` +
+            `Map position: column ${piece.col}, row ${piece.row}. Height: ${piece.height || 0}m.\n` +
+            `Focus on strategic importance, current condition, and hidden danger. Be specific, not generic.`
+          }],
+        }),
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || "";
+      setDesc(text);
+      commit(null, text);
+    } catch (e) { console.error(e); }
+    setAiLoading(false);
+  };
+
+  const saveKey = () => {
+    if (keyInput.trim()) {
+      localStorage.setItem("anthropic-key", keyInput.trim());
+      setKeyInput(""); setShowKey(false);
+      handleAI();
+    }
+  };
+
+  return (
+    <div style={{
+      position: "absolute", left: leftOffset, top: 88, width: 284, zIndex: 50,
+      background: "rgba(7,5,22,0.97)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)",
+      border: `1px solid ${accent}35`, borderLeft: `3px solid ${accent}`,
+      borderRadius: 12, padding: "16px 18px",
+      boxShadow: `0 12px 40px rgba(0,0,0,0.8), 0 0 0 1px ${accent}15`,
+      fontFamily: "var(--font-ui)",
+    }}>
+      {/* Type + coords */}
+      <div style={{ fontSize: 9, color: accent, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 10 }}>
+        {piece.id.replace("-", " ")} · ({piece.col}, {piece.row})
+      </div>
+
+      {/* Header: mini art + editable name */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div style={{ width: 38, height: 38, flexShrink: 0, background: "rgba(255,255,255,0.04)", borderRadius: 8, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <svg width={34} height={34} viewBox="0 0 80 80" style={{ overflow: "visible" }}>
+            <polygon points={_ptop} fill="#1E1248"/>
+            <polygon points={_ptop} fill="none" stroke={accent} strokeWidth={1.2}/>
+            <PieceThumbArt id={piece.id} cx={_pcx} ty={_pty} cy={_pcy}/>
+          </svg>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {editingName ? (
+            <input autoFocus value={name} onChange={e => setName(e.target.value)}
+              onBlur={saveName}
+              onKeyDown={e => { if (e.key==="Enter") saveName(); if (e.key==="Escape") { setName(details.name||piece.label); setEditingName(false); }}}
+              style={{ width:"100%", boxSizing:"border-box", background:"rgba(255,255,255,0.07)", border:`1px solid ${accent}50`, borderRadius:6, padding:"4px 8px", color:"#F0F0FF", fontFamily:"var(--font-ui)", fontSize:14, fontWeight:700, outline:"none" }}
+            />
+          ) : (
+            <div
+              onClick={() => setEditingName(true)}
+              title="Click to rename"
+              style={{ fontSize:14, fontWeight:700, color:"#F0F0FF", cursor:"text", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+                borderBottom:"1px dashed transparent", transition:"border-color 0.15s, color 0.15s" }}
+              onMouseEnter={e=>{e.currentTarget.style.borderBottomColor=`${accent}55`; e.currentTarget.style.color=accent;}}
+              onMouseLeave={e=>{e.currentTarget.style.borderBottomColor="transparent"; e.currentTarget.style.color="#F0F0FF";}}
+            >{name}</div>
+          )}
+          <div style={{ fontSize:10, color:"var(--text-dim)", marginTop:2 }}>{piece.desc}</div>
+        </div>
+        <button onClick={onClose} style={{ flexShrink:0, background:"transparent", border:"none", color:"var(--text-dim)", cursor:"pointer", fontSize:14, padding:"0 0 0 6px" }}>✕</button>
+      </div>
+
+      {/* Stats */}
+      <div style={{ display:"flex", gap:16, marginBottom:12, fontSize:10, color:"var(--text-secondary)" }}>
+        {[["HEIGHT", `${piece.height||0}m`], ["DEFENSE", `+${Math.floor((piece.height||0)/20)}`]].map(([l,v])=>(
+          <span key={l}><span style={{color:"var(--text-dim)"}}>{l} </span><span style={{color:"#C0B0FF",fontFamily:"var(--font-mono)"}}>{v}</span></span>
+        ))}
+      </div>
+
+      {/* Description textarea */}
+      <textarea
+        value={desc}
+        onChange={e => { setDesc(e.target.value); commit(null, e.target.value); }}
+        placeholder={`Add lore, notes, or strategic context for this ${name}…`}
+        rows={4}
+        style={{
+          width:"100%", boxSizing:"border-box", marginBottom:10,
+          background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)",
+          borderRadius:8, padding:"10px 12px", color:"#D0C8FF",
+          fontFamily:"var(--font-ui)", fontSize:11, lineHeight:1.55, resize:"vertical",
+          outline:"none", transition:"border-color 0.15s",
+        }}
+        onFocus={e=>e.target.style.borderColor=`${accent}50`}
+        onBlur={e=>e.target.style.borderColor="rgba(255,255,255,0.08)"}
+      />
+
+      {/* API key prompt */}
+      {showKey && (
+        <div style={{ display:"flex", gap:6, marginBottom:10 }}>
+          <input autoFocus placeholder="sk-ant-… Anthropic API key"
+            value={keyInput} onChange={e=>setKeyInput(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&saveKey()}
+            style={{ flex:1, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(110,65,255,0.4)", borderRadius:6, padding:"6px 10px", color:"#E0D8FF", fontFamily:"var(--font-mono)", fontSize:10, outline:"none" }}
+          />
+          <button onClick={saveKey} style={{ padding:"6px 10px", background:"rgba(110,65,255,0.25)", border:"1px solid rgba(110,65,255,0.5)", borderRadius:6, color:"#C090FF", cursor:"pointer", fontSize:10, fontFamily:"var(--font-ui)" }}>OK</button>
+          <button onClick={()=>setShowKey(false)} style={{ padding:"6px 8px", background:"transparent", border:"1px solid rgba(255,255,255,0.1)", borderRadius:6, color:"var(--text-dim)", cursor:"pointer", fontSize:10 }}>✕</button>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div style={{ display:"flex", gap:8 }}>
+        <button onClick={handleAI} disabled={aiLoading} style={{
+          flex:2, height:32, borderRadius:8, border:`1px solid ${accent}50`,
+          background: aiLoading ? `${accent}0A` : `${accent}20`,
+          color: aiLoading ? `${accent}80` : "#C090FF",
+          fontSize:10, fontFamily:"var(--font-ui)", letterSpacing:"0.05em", cursor:"pointer",
+          display:"flex", alignItems:"center", justifyContent:"center", gap:6, transition:"all 0.15s",
+        }}>
+          {aiLoading
+            ? <><span style={{ width:10,height:10,borderRadius:"50%",border:`1.5px solid ${accent}60`,borderTopColor:accent,display:"inline-block",animation:"spin 0.7s linear infinite" }}/> GENERATING</>
+            : "✦ AI PREFILL"
+          }
+        </button>
+        <button onClick={onRemove} style={{
+          flex:1, height:32, borderRadius:8, border:"1px solid rgba(204,34,0,0.4)",
+          background:"transparent", color:"#FF6B5B", fontSize:10, fontFamily:"var(--font-ui)",
+          letterSpacing:"0.04em", cursor:"pointer",
+        }}>REMOVE</button>
+      </div>
     </div>
   );
 };
@@ -1125,6 +1298,9 @@ const WorldMap = () => {
   const [draggingCharId, setDraggingCharId]   = React.useState(null);
   const [draggingPiece, setDraggingPiece]     = React.useState(null);
 
+  const [selectedPieceId, setSelectedPieceId] = React.useState(null);
+  const [pieceDetails, setPieceDetails]       = React.useState({});
+
   // ── UNIVERSE 2 ────────────────────────────────────────────────────────
   const [showUniverse2, setShowUniverse2]         = React.useState(false);
   const [activeUniverse, setActiveUniverse]       = React.useState(1);
@@ -1354,17 +1530,22 @@ const WorldMap = () => {
 
           {/* OVERLAY: placed pieces + characters (same coordinate system as SVG) */}
           <div style={{ position: "absolute", top: 0, left: 0, width: ISO_SVG_W, height: ISO_SVG_H, pointerEvents: "none" }}>
-            {/* Ghost universe pieces */}
+            {/* Ghost universe pieces — not interactive */}
             {showUniverse2 && (
-              <div style={{ opacity: 0.3 }}>
+              <div style={{ opacity: 0.3, pointerEvents: "none" }}>
                 {(activeUniverse === 1 ? placedPieces2 : placedPieces).map(piece => (
-                  <PlacedPiece key={`ghost-${piece.instanceId}`} piece={piece} col={piece.col} row={piece.row} />
+                  <PlacedPiece key={`ghost-${piece.instanceId}`} piece={piece} col={piece.col} row={piece.row}
+                    isSelected={false} onClick={()=>{}} customName={null} />
                 ))}
               </div>
             )}
-            {/* Active universe pieces */}
+            {/* Active universe pieces — interactive */}
             {activePieces.map(piece => (
-              <PlacedPiece key={piece.instanceId} piece={piece} col={piece.col} row={piece.row} />
+              <PlacedPiece key={piece.instanceId} piece={piece} col={piece.col} row={piece.row}
+                isSelected={selectedPieceId === piece.instanceId}
+                onClick={() => setSelectedPieceId(id => id === piece.instanceId ? null : piece.instanceId)}
+                customName={pieceDetails[piece.instanceId]?.name || null}
+              />
             ))}
             {CHARACTERS_MAP.map(c => {
               const pos = activeCharPos[c.id] || { col: c.col, row: c.row };
@@ -1467,6 +1648,28 @@ const WorldMap = () => {
           EDITING — {activeUniverse === 1 ? "UNIVERSE 1" : "UNIVERSE 2"}
         </div>
       )}
+
+      {/* PIECE DETAIL CARD */}
+      {selectedPieceId && (() => {
+        const selectedPiece = activePieces.find(p => p.instanceId === selectedPieceId);
+        if (!selectedPiece) return null;
+        return (
+          <PieceDetailCard
+            piece={selectedPiece}
+            details={pieceDetails[selectedPieceId] || {}}
+            leftOffset={leftOpen ? PANEL_W + 12 : 12}
+            onClose={() => setSelectedPieceId(null)}
+            onRemove={() => {
+              setActivePieces(prev => prev.filter(p => p.instanceId !== selectedPieceId));
+              setSelectedPieceId(null);
+            }}
+            onUpdate={(d) => setPieceDetails(prev => ({
+              ...prev,
+              [selectedPieceId]: { ...(prev[selectedPieceId] || {}), ...d }
+            }))}
+          />
+        );
+      })()}
 
       {/* LEFT PANEL */}
       <div style={{
