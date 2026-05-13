@@ -575,7 +575,7 @@ const EventArt = ({ id, cx, ty }) => {
     );
     case "wildfire": return (
       <g>
-        {[[0,0,"#FF6B00"],[−6,3,"#FF9500"],[6,3,"#FF4500"],[-2,7,"#FFB800"]].map(([dx,dy,c],i)=>(
+        {[[0,0,"#FF6B00"],[-6,3,"#FF9500"],[6,3,"#FF4500"],[-2,7,"#FFB800"]].map(([dx,dy,c],i)=>(
           <path key={i} d={`M${cx+dx},${by+dy} Q${cx+dx-4},${by+dy-10} ${cx+dx},${by+dy-18} Q${cx+dx+5},${by+dy-10} ${cx+dx+1},${by+dy}`}
             fill={c} opacity={0.85+(i*0.05)}/>
         ))}
@@ -650,7 +650,7 @@ const EventArt = ({ id, cx, ty }) => {
         <circle cx={cx-2} cy={by-10} r={12} fill="#222"/>
         <circle cx={cx-2} cy={by-10} r={12} fill="none" stroke="#CC2200" strokeWidth={1.5}/>
         <line x1={cx+8} y1={by-20} x2={cx+16} y2={by-28} stroke="#FFB800" strokeWidth={2.5} strokeLinecap="round"/>
-        {[[-14,−10],[14,−14],[-12,−18],[10,−22]].map(([dx,dy],i)=>(
+        {[[-14,-10],[14,-14],[-12,-18],[10,-22]].map(([dx,dy],i)=>(
           <line key={i} x1={cx+dx} y1={by+dy} x2={cx+dx+(dx>0?5:-5)} y2={by+dy-6}
             stroke="#FF4400" strokeWidth={1.5} strokeLinecap="round" opacity={0.8}/>
         ))}
@@ -701,7 +701,7 @@ const EventArt = ({ id, cx, ty }) => {
     );
     case "drug": return (
       <g>
-        {[[-8,-12],[4,-8],[−4,-4]].map(([dx,dy],i)=>(
+        {[[-8,-12],[4,-8],[-4,-4]].map(([dx,dy],i)=>(
           <g key={i} transform={`rotate(${-30+i*20},${cx+dx},${by+dy})`}>
             <rect x={cx+dx-7} y={by+dy-4} width={14} height={8} rx={4} fill={i%2?"#E040FB":"#9C27B0"}/>
             <line x1={cx+dx} y1={by+dy-4} x2={cx+dx} y2={by+dy+4} stroke="rgba(255,255,255,0.3)" strokeWidth={1}/>
@@ -1287,7 +1287,7 @@ const LayerPanel = ({ layers, onToggle, mapMode, onModeChange, open, onToggleOpe
             {activeLayers.length}
           </span>
         </div>
-        <span style={{ color: "#6B6B8A", fontSize: 16, lineHeight: 1, fontWeight: 300 }}>{open ? "−" : "+"}</span>
+        <span style={{ color: "#6B6B8A", fontSize: 16, lineHeight: 1, fontWeight: 300 }}>{open ? "-" : "+"}</span>
       </button>
       {open && (
         <div style={{ padding: "0 16px 16px" }}>
@@ -1369,7 +1369,7 @@ const ZoomControls = ({ zoom, onZoomIn, onZoomOut, onReset }) => (
     <div style={{ width: 40, padding: "4px 0", background: "rgba(15,15,26,0.9)", border: "1px solid var(--iron)", borderRadius: 7, fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--text-dim)", textAlign: "center" }}>
       {Math.round(zoom * 100)}%
     </div>
-    <button style={zBtnStyle} onClick={onZoomOut}>−</button>
+    <button style={zBtnStyle} onClick={onZoomOut}>-</button>
     <button style={{ ...zBtnStyle, marginTop: 4, fontSize: 14 }} onClick={onReset} title="Reset view">⌖</button>
   </div>
 );
@@ -1389,7 +1389,7 @@ const StampSection = ({ cat, selectedId, onSelect }) => {
             {cat.label}
           </span>
         </span>
-        <span style={{ color: "var(--text-dim)", fontSize: 10 }}>{open ? "−" : "+"}</span>
+        <span style={{ color: "var(--text-dim)", fontSize: 10 }}>{open ? "-" : "+"}</span>
       </button>
       {open && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, padding: "4px 10px 10px" }}>
