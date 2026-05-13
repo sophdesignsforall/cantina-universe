@@ -138,12 +138,12 @@ const STAMP_CATEGORIES = [
 ];
 
 const INITIAL_BLOBS = [
-  { id: "b1", kind: "trauma",   label: "World Engine Event",     x: 38, y: 44, r: 220, color: "0,212,170",  intensity: 0.7,  stamp: "🌀", severity: 9, characters: ["Kal-El", "Lois"] },
-  { id: "b2", kind: "power",    label: "LexCorp Influence",      x: 41, y: 50, r: 150, color: "201,168,76", intensity: 0.55, stamp: "💎", severity: 7, characters: ["Lex"]           },
-  { id: "b3", kind: "conflict", label: "Gotham Active Conflict", x: 50, y: 56, r: 170, color: "204,34,0",   intensity: 0.65, stamp: "💥", severity: 8, characters: ["Bruce"]         },
-  { id: "b4", kind: "bio",      label: "Outbreak Vector",        x: 64, y: 38, r: 200, color: "45,255,120", intensity: 0.5,  stamp: "🦠", severity: 6, spreading: true, characters: ["Lois"] },
-  { id: "b5", kind: "power",    label: "Smallville Rural",       x: 28, y: 62, r: 100, color: "201,168,76", intensity: 0.3,  stamp: "🌾", severity: 3, characters: ["Jonathan"]      },
-  { id: "b6", kind: "cosmic",   label: "Kryptonite Deposit",     x: 78, y: 58, r: 80,  color: "123,47,255", intensity: 0.55, stamp: "💜", severity: 7, characters: []                },
+  { id: "b1", kind: "trauma",   stampId: "hurricane", label: "World Engine Event",     x: 38, y: 44, r: 220, color: "0,212,170",  intensity: 0.7,  severity: 9, characters: ["Kal-El", "Lois"] },
+  { id: "b2", kind: "power",    stampId: "wealth",    label: "LexCorp Influence",      x: 41, y: 50, r: 150, color: "201,168,76", intensity: 0.55, severity: 7, characters: ["Lex"]           },
+  { id: "b3", kind: "conflict", stampId: "military",  label: "Gotham Active Conflict", x: 50, y: 56, r: 170, color: "204,34,0",   intensity: 0.65, severity: 8, characters: ["Bruce"]         },
+  { id: "b4", kind: "bio",      stampId: "pandemic",  label: "Outbreak Vector",        x: 64, y: 38, r: 200, color: "45,255,120", intensity: 0.5,  severity: 6, spreading: true, characters: ["Lois"] },
+  { id: "b5", kind: "power",    stampId: "poverty",   label: "Smallville Rural",       x: 28, y: 62, r: 100, color: "201,168,76", intensity: 0.3,  severity: 3, characters: ["Jonathan"]      },
+  { id: "b6", kind: "cosmic",   stampId: "radiation", label: "Kryptonite Deposit",     x: 78, y: 58, r: 80,  color: "123,47,255", intensity: 0.55, severity: 7, characters: []                },
 ];
 
 const CHARACTERS_MAP = [
@@ -547,6 +547,290 @@ const PieceThumbArt = ({ id, cx, ty, cy }) => {
   return <text x={40} y={54} fontSize={22} textAnchor="middle" dominantBaseline="middle">{/* fallback emoji */}</text>;
 };
 
+// ── EVENT ART ─────────────────────────────────────────────────────────
+// Isometric SVG art for each event stamp type.
+// cx=center-x, ty=top-y of platform, cy=center-y of platform
+const EventArt = ({ id, cx, ty }) => {
+  const by = ty - 2; // base y for art above platform
+  switch (id) {
+    case "hurricane": return (
+      <g>
+        {[22,16,10].map((r,i) => (
+          <ellipse key={i} cx={cx} cy={by-8} rx={r} ry={r*0.4}
+            fill="none" stroke={i===0?"rgba(0,200,255,0.5)":i===1?"rgba(0,220,255,0.7)":"#00EEFF"}
+            strokeWidth={1.8-i*0.3} strokeDasharray={`${6-i} ${3+i}`}/>
+        ))}
+        <ellipse cx={cx} cy={by-8} rx={4} ry={4} fill="#00EEFF" opacity={0.9}/>
+        <line x1={cx} y1={by-4} x2={cx} y2={by+4} stroke="#00EEFF" strokeWidth={2}/>
+      </g>
+    );
+    case "flood": return (
+      <g>
+        <path d={`M${cx-20},${by} Q${cx-10},${by-14} ${cx},${by-7} Q${cx+10},${by-18} ${cx+20},${by-4}`}
+          fill="none" stroke="#00B4FF" strokeWidth={3} strokeLinecap="round"/>
+        <path d={`M${cx-18},${by+5} Q${cx-8},${by-8} ${cx+2},${by-2} Q${cx+12},${by-14} ${cx+20},${by+2}`}
+          fill="none" stroke="rgba(0,180,255,0.55)" strokeWidth={2} strokeLinecap="round"/>
+        <ellipse cx={cx} cy={by+2} rx={16} ry={4} fill="rgba(0,140,255,0.25)"/>
+      </g>
+    );
+    case "wildfire": return (
+      <g>
+        {[[0,0,"#FF6B00"],[−6,3,"#FF9500"],[6,3,"#FF4500"],[-2,7,"#FFB800"]].map(([dx,dy,c],i)=>(
+          <path key={i} d={`M${cx+dx},${by+dy} Q${cx+dx-4},${by+dy-10} ${cx+dx},${by+dy-18} Q${cx+dx+5},${by+dy-10} ${cx+dx+1},${by+dy}`}
+            fill={c} opacity={0.85+(i*0.05)}/>
+        ))}
+        <ellipse cx={cx} cy={by+6} rx={14} ry={3} fill="rgba(255,80,0,0.2)"/>
+      </g>
+    );
+    case "cold": return (
+      <g>
+        {[0,60,120].map((a,i) => {
+          const rad = a * Math.PI / 180;
+          const x1=cx+Math.cos(rad)*18, y1=(by-8)+Math.sin(rad)*10;
+          const x2=cx-Math.cos(rad)*18, y2=(by-8)-Math.sin(rad)*10;
+          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#88DDFF" strokeWidth={2.2}/>;
+        })}
+        {[0,60,120].map((a,i) => {
+          const rad = a * Math.PI / 180;
+          return [1,-1].map(s => {
+            const bx=cx+Math.cos(rad)*s*10, by2=(by-8)+Math.sin(rad)*s*5.5;
+            return <line key={`${i}-${s}`} x1={bx} y1={by2} x2={bx+4} y2={by2-5} stroke="#AAEEFF" strokeWidth={1.2}/>;
+          });
+        })}
+        <circle cx={cx} cy={by-8} r={4} fill="#CCF0FF"/>
+      </g>
+    );
+    case "volcano": return (
+      <g>
+        <polygon points={`${cx},${by-24} ${cx-20},${by+6} ${cx+20},${by+6}`} fill="#4A3030"/>
+        <polygon points={`${cx},${by-22} ${cx-6},${by-8} ${cx+6},${by-8}`} fill="#FF4400" opacity={0.9}/>
+        <circle cx={cx-10} cy={by-4} r={3} fill="#FF6600" opacity={0.7}/>
+        <circle cx={cx+12} cy={by} r={2} fill="#FF8800" opacity={0.6}/>
+        <path d={`M${cx},${by-22} Q${cx+8},${by-16} ${cx+4},${by-6}`} stroke="#FF2200" strokeWidth={2.5} fill="none"/>
+      </g>
+    );
+    case "radiation": return (
+      <g>
+        <circle cx={cx} cy={by-8} r={6} fill="#FFE030"/>
+        {[30,150,270].map((a,i) => {
+          const r=a*Math.PI/180, r2=(a+60)*Math.PI/180;
+          const x1=cx+Math.cos(r)*8,y1=(by-8)+Math.sin(r)*8;
+          const x2=cx+Math.cos(r2)*8,y2=(by-8)+Math.sin(r2)*8;
+          const x3=cx+Math.cos(r)*18,y3=(by-8)+Math.sin(r)*18;
+          const x4=cx+Math.cos(r2)*18,y4=(by-8)+Math.sin(r2)*18;
+          return <path key={i} d={`M${x1},${y1} L${x3},${y3} A18,18 0 0,1 ${x4},${y4} L${x2},${y2} Z`}
+            fill="#FFD700" opacity={0.85}/>;
+        })}
+        <circle cx={cx} cy={by-8} r={4} fill="#FFE030"/>
+        <circle cx={cx} cy={by-8} r={2} fill="#1A1000"/>
+      </g>
+    );
+    case "military": return (
+      <g>
+        <rect x={cx-18} y={by-8} width={36} height={10} rx={2} fill="#4A5520"/>
+        <rect x={cx-14} y={by-14} width={28} height={8} rx={2} fill="#5A6630"/>
+        <rect x={cx-4} y={by-20} width={20} height={6} rx={1} fill="#6A7640"/>
+        <circle cx={cx-12} cy={by+2} r={5} fill="#333" stroke="#555" strokeWidth={1}/>
+        <circle cx={cx+12} cy={by+2} r={5} fill="#333" stroke="#555" strokeWidth={1}/>
+        <circle cx={cx} cy={by+2} r={4} fill="#333" stroke="#555" strokeWidth={1}/>
+      </g>
+    );
+    case "meta": return (
+      <g>
+        <ellipse cx={cx} cy={by-8} rx={12} ry={18} fill="#7B2FF7" opacity={0.9}/>
+        <ellipse cx={cx} cy={by-22} rx={7} ry={7} fill="#C060FF"/>
+        <path d={`M${cx-12},${by+6} Q${cx-18},${by-2} ${cx},${by-8} Q${cx+18},${by-2} ${cx+12},${by+6}`}
+          fill="#5B1FD7" opacity={0.7}/>
+        <ellipse cx={cx} cy={by-22} rx={5} ry={3} fill="#0A0820" opacity={0.6}/>
+        <circle cx={cx} cy={by-22} r={2} fill="#FF60E0" opacity={0.8}/>
+      </g>
+    );
+    case "bombing": return (
+      <g>
+        <circle cx={cx-2} cy={by-10} r={12} fill="#222"/>
+        <circle cx={cx-2} cy={by-10} r={12} fill="none" stroke="#CC2200" strokeWidth={1.5}/>
+        <line x1={cx+8} y1={by-20} x2={cx+16} y2={by-28} stroke="#FFB800" strokeWidth={2.5} strokeLinecap="round"/>
+        {[[-14,−10],[14,−14],[-12,−18],[10,−22]].map(([dx,dy],i)=>(
+          <line key={i} x1={cx+dx} y1={by+dy} x2={cx+dx+(dx>0?5:-5)} y2={by+dy-6}
+            stroke="#FF4400" strokeWidth={1.5} strokeLinecap="round" opacity={0.8}/>
+        ))}
+        <circle cx={cx-2} cy={by-10} r={5} fill="#CC2200" opacity={0.5}/>
+      </g>
+    );
+    case "surveil": return (
+      <g>
+        <ellipse cx={cx} cy={by-8} rx={20} ry={12} fill="rgba(0,30,60,0.6)" stroke="#00C8FF" strokeWidth={1.5}/>
+        <ellipse cx={cx} cy={by-8} rx={11} ry={7} fill="#004488"/>
+        <circle cx={cx} cy={by-8} r={6} fill="#0099FF"/>
+        <circle cx={cx} cy={by-8} r={3} fill="#001830"/>
+        <circle cx={cx+2} cy={by-10} r={1.2} fill="#AADDFF"/>
+      </g>
+    );
+    case "pandemic": return (
+      <g>
+        <circle cx={cx} cy={by-10} r={12} fill="#1A5C1A" stroke="#2DFF78" strokeWidth={1.2}/>
+        {[0,60,120,180,240,300].map((a,i)=>{
+          const r=a*Math.PI/180;
+          return <g key={i}>
+            <line x1={cx+Math.cos(r)*12} y1={(by-10)+Math.sin(r)*12}
+              x2={cx+Math.cos(r)*18} y2={(by-10)+Math.sin(r)*18}
+              stroke="#2DFF78" strokeWidth={1.8}/>
+            <circle cx={cx+Math.cos(r)*19} cy={(by-10)+Math.sin(r)*19} r={2.5} fill="#2DFF78"/>
+          </g>;
+        })}
+        <circle cx={cx} cy={by-10} r={4} fill="#00FF66" opacity={0.7}/>
+      </g>
+    );
+    case "bioweapon": return (
+      <g>
+        <circle cx={cx} cy={by-9} r={5} fill="none" stroke="#88FF00" strokeWidth={2}/>
+        {[30,150,270].map((a,i)=>{
+          const r=a*Math.PI/180,r2=(a+60)*Math.PI/180;
+          const [x1,y1]=[cx+Math.cos(r)*6,(by-9)+Math.sin(r)*6];
+          const [x2,y2]=[cx+Math.cos(r2)*6,(by-9)+Math.sin(r2)*6];
+          return <g key={i}>
+            <circle cx={cx+Math.cos((a+30)*Math.PI/180)*13} cy={(by-9)+Math.sin((a+30)*Math.PI/180)*13} r={5}
+              fill="none" stroke="#88FF00" strokeWidth={2}/>
+            <line x1={x1} y1={y1} x2={cx+Math.cos((a+30)*Math.PI/180)*8} y2={(by-9)+Math.sin((a+30)*Math.PI/180)*8}
+              stroke="#88FF00" strokeWidth={1.5}/>
+          </g>;
+        })}
+        <circle cx={cx} cy={by-9} r={3} fill="#BBFF44"/>
+        <line x1={cx} y1={by-4} x2={cx} y2={by+4} stroke="#88FF00" strokeWidth={2}/>
+      </g>
+    );
+    case "drug": return (
+      <g>
+        {[[-8,-12],[4,-8],[−4,-4]].map(([dx,dy],i)=>(
+          <g key={i} transform={`rotate(${-30+i*20},${cx+dx},${by+dy})`}>
+            <rect x={cx+dx-7} y={by+dy-4} width={14} height={8} rx={4} fill={i%2?"#E040FB":"#9C27B0"}/>
+            <line x1={cx+dx} y1={by+dy-4} x2={cx+dx} y2={by+dy+4} stroke="rgba(255,255,255,0.3)" strokeWidth={1}/>
+          </g>
+        ))}
+      </g>
+    );
+    case "healthcare": return (
+      <g>
+        <rect x={cx-16} y={by-20} width={32} height={22} rx={1} fill="#1A3A6A"/>
+        <rect x={cx-12} y={by-16} width={8} height={8} rx={1} fill="#4A90D0"/>
+        <rect x={cx+4} y={by-16} width={8} height={8} rx={1} fill="#4A90D0"/>
+        <rect x={cx-4} y={by-24} width={8} height={6} rx={1} fill="#CC2020"/>
+        <rect x={cx-8} y={by-20} width={16} height={4} fill="#1A3A6A"/>
+        <rect x={cx-2} y={by-22} width={4} height={8} fill="#FF3333"/>
+        <rect x={cx-6} y={by-18} width={12} height={4} fill="#FF3333"/>
+        <rect x={cx-8} y={by-2} width={16} height={4} fill="#0A1A40"/>
+      </g>
+    );
+    case "boom": return (
+      <g>
+        {[[0,0,10],[6,-6,7],[12,-10,5]].map(([dx,dy,h],i)=>(
+          <rect key={i} x={cx-18+dx*2.2} y={by-dy-h} width={8} height={h+dy} rx={1}
+            fill={`hsl(${100+i*10},90%,${40+i*8}%)`}/>
+        ))}
+        <path d={`M${cx+12},${by-20} L${cx+20},${by-28} L${cx+14},${by-22} L${cx+22},${by-24}`}
+          stroke="#2DFF78" strokeWidth={2.5} strokeLinecap="round" fill="none"/>
+      </g>
+    );
+    case "collapse": return (
+      <g>
+        {[[0,0,10],[6,4,7],[12,8,5]].map(([dx,dy,h],i)=>(
+          <rect key={i} x={cx-18+dx*2} y={by-h+dy} width={8} height={h} rx={1}
+            fill={`hsl(${10-i*5},85%,${40-i*5}%)`}/>
+        ))}
+        <path d={`M${cx+12},${by-10} L${cx+20},${by-2} L${cx+14},${by-8} L${cx+22},${by-4}`}
+          stroke="#FF3A3A" strokeWidth={2.5} strokeLinecap="round" fill="none"/>
+      </g>
+    );
+    case "industrial": return (
+      <g>
+        <rect x={cx-18} y={by-14} width={36} height={16} rx={1} fill="#3A3A3A"/>
+        <rect x={cx-14} y={by-24} width={8} height={12} rx={1} fill="#2A2A2A"/>
+        <rect x={cx+4} y={by-20} width={8} height={8} rx={1} fill="#2A2A2A"/>
+        <path d={`M${cx-10},${by-24} Q${cx-10},${by-32} ${cx-8},${by-34}`}
+          stroke="#888" strokeWidth={3} fill="none" strokeLinecap="round"/>
+        <path d={`M${cx+8},${by-20} Q${cx+8},${by-28} ${cx+10},${by-30}`}
+          stroke="#777" strokeWidth={2.5} fill="none" strokeLinecap="round"/>
+        <rect x={cx-8} y={by-10} width={6} height={8} rx={1} fill="#FFB800" opacity={0.6}/>
+      </g>
+    );
+    case "poverty": return (
+      <g>
+        <polygon points={`${cx-14},${by-8} ${cx},${by-22} ${cx+14},${by-8}`} fill="#5C3A2A"/>
+        <rect x={cx-14} y={by-8} width={28} height={10} rx={1} fill="#4A3020"/>
+        <rect x={cx-6} y={by-6} width={5} height={7} rx={1} fill="#2A1810"/>
+        <rect x={cx+2} y={by-4} width={4} height={5} rx={1} fill="#6A4A30" opacity={0.5}/>
+        <line x1={cx-10} y1={by-16} x2={cx-14} y2={by-12} stroke="#6A4A30" strokeWidth={1.5}/>
+      </g>
+    );
+    case "wealth": return (
+      <g>
+        <rect x={cx+4} y={by-26} width={10} height={28} rx={1} fill="#1A4488"/>
+        <rect x={cx+4} y={by-26} width={10} height={28} rx={1} fill="none" stroke="#4488FF" strokeWidth={0.8}/>
+        <rect x={cx-8} y={by-18} width={10} height={20} rx={1} fill="#1A3A7A"/>
+        <rect x={cx-20} y={by-12} width={10} height={14} rx={1} fill="#162E64"/>
+        {[cx+6,cx+10].map((x,i)=>(
+          <rect key={i} x={x} y={by-22+i*6} width={2} height={3} rx={0.5} fill="#88BBFF" opacity={0.8}/>
+        ))}
+      </g>
+    );
+    case "instability": return (
+      <g>
+        <rect x={cx-14} y={by-10} width={28} height={12} rx={1} fill="#2A1A5A"/>
+        <polygon points={`${cx-10},${by-10} ${cx},${by-24} ${cx+10},${by-10}`} fill="#3A2570"/>
+        <ellipse cx={cx} cy={by-24} rx={8} ry={5} fill="#2A1A5A"/>
+        <ellipse cx={cx} cy={by-24} rx={8} ry={5} fill="none" stroke="#9060FF" strokeWidth={1.2}/>
+        <line x1={cx} y1={by-20} x2={cx} y2={by-28} stroke="#C090FF" strokeWidth={1.5}/>
+        <rect x={cx-2} y={by-32} width={4} height={6} rx={0} fill="#DD2020"/>
+      </g>
+    );
+    case "media": return (
+      <g>
+        <path d={`M${cx-4},${by-18} L${cx+16},${by-26} L${cx+16},${by-6} L${cx-4},${by-14} Z`}
+          fill="#FF8800"/>
+        <path d={`M${cx-12},${by-16} L${cx-4},${by-18} L${cx-4},${by-14} L${cx-12},${by-12} Z`}
+          fill="#CC6600"/>
+        {[1,2,3].map(i=>(
+          <path key={i} d={`M${cx+18},${by-22+i*4} Q${cx+22+i*2},${by-20+i*4} ${cx+24+i*2},${by-18+i*4}`}
+            fill="none" stroke="#FF8800" strokeWidth={1.5-i*0.2} opacity={1-i*0.25} strokeLinecap="round"/>
+        ))}
+      </g>
+    );
+    case "unrest": return (
+      <g>
+        <path d={`M${cx-10},${by} L${cx-6},${by-8} L${cx-14},${by-10} L${cx-6},${by-16} L${cx-10},${by-20} L${cx+2},${by-16} L${cx+8},${by-20} L${cx+10},${by-12} L${cx+4},${by-8} L${cx+12},${by-4} L${cx+6},${by+2} Z`}
+          fill="#CC2200"/>
+        <rect x={cx-6} y={by} width={4} height={10} fill="#884400"/>
+      </g>
+    );
+    case "authority": return (
+      <g>
+        <rect x={cx-10} y={by-8} width={20} height={14} rx={3} fill="#3A3A44"/>
+        <rect x={cx-10} y={by-8} width={20} height={14} rx={3} fill="none" stroke="#888" strokeWidth={1.5}/>
+        <path d={`M${cx-6},${by-8} Q${cx-6},${by-20} ${cx},${by-20} Q${cx+6},${by-20} ${cx+6},${by-8}`}
+          fill="none" stroke="#888" strokeWidth={2.5}/>
+        <circle cx={cx} cy={by-1} r={3} fill="#C0C0C0"/>
+        <rect x={cx-1} y={by-1} width={2} height={4} rx={0.5} fill="#888"/>
+      </g>
+    );
+    default: return null;
+  }
+};
+
+// Thumbnail wrapper: isometric platform + EventArt
+const EventThumb = ({ id, color = "rgba(110,65,255,0.8)", size = 48 }) => (
+  <div style={{ width: size, height: size, flexShrink: 0 }}>
+    <svg width={size} height={size} viewBox="0 0 80 80" style={{ overflow: "visible" }}>
+      <polygon points={_prgt} fill="#0A0820"/>
+      <polygon points={_prgt} fill="none" stroke="rgba(80,45,200,0.4)" strokeWidth={0.8}/>
+      <polygon points={_plft} fill="#130D30"/>
+      <polygon points={_plft} fill="none" stroke="rgba(80,45,200,0.4)" strokeWidth={0.8}/>
+      <polygon points={_ptop} fill="#1E1248"/>
+      <polygon points={_ptop} fill="none" stroke={color} strokeWidth={1.2}/>
+      <EventArt id={id} cx={_pcx} ty={_pty} cy={_pcy}/>
+    </svg>
+  </div>
+);
+
 const PieceThumb = ({ piece, size = 48 }) => (
   <div style={{ width: size, height: size, flexShrink: 0 }}>
     <svg width={size} height={size} viewBox="0 0 80 80" style={{ overflow: "visible" }}>
@@ -771,11 +1055,6 @@ const PlacedPiece = ({ piece, col, row, isSelected, onClick, customName }) => {
       }}>
         <PieceThumbArt id={piece.id} cx={TILE_W / 2} ty={40} cy={60} />
       </svg>
-      <div style={{
-        fontSize: 8, textAlign: "center", fontFamily: "var(--font-ui)", letterSpacing: "0.05em",
-        marginTop: -8, textShadow: "0 1px 4px rgba(0,0,0,1)", transition: "color 0.15s",
-        color: isSelected ? accent : "rgba(255,255,255,0.45)",
-      }}>{customName || piece.label}</div>
     </div>
   );
 };
@@ -1113,24 +1392,25 @@ const StampSection = ({ cat, selectedId, onSelect }) => {
         <span style={{ color: "var(--text-dim)", fontSize: 10 }}>{open ? "−" : "+"}</span>
       </button>
       {open && (
-        <div style={{ padding: "2px 10px 10px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, padding: "4px 10px 10px" }}>
           {cat.stamps.map(s => {
             const isSel = selectedId === s.id;
             return (
               <button key={s.id}
                 onClick={() => onSelect(isSel ? null : { ...s, categoryColor: cat.color, categoryRgb: cat.colorRgb })}
                 style={{
-                  display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "8px 10px", marginBottom: 2,
-                  background: isSel ? "rgba(0,212,170,0.08)" : "transparent",
-                  border: `1px solid ${isSel ? "var(--krypton)" : "transparent"}`,
-                  borderRadius: 8, cursor: "pointer", textAlign: "left",
-                  color: isSel ? "var(--text-primary)" : "var(--text-secondary)", transition: "all 120ms ease",
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                  padding: "8px 6px 6px",
+                  background: isSel ? `${cat.color}14` : "rgba(255,255,255,0.02)",
+                  border: `1px solid ${isSel ? cat.color + "66" : "rgba(255,255,255,0.07)"}`,
+                  borderRadius: 10, cursor: "pointer", textAlign: "center",
+                  transition: "all 120ms ease",
                 }}
-                onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
-                onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = "transparent"; }}
+                onMouseEnter={e => { if (!isSel) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor = cat.color + "33"; }}}
+                onMouseLeave={e => { if (!isSel) { e.currentTarget.style.background = "rgba(255,255,255,0.02)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; }}}
               >
-                <span style={{ fontSize: 18, lineHeight: 1, width: 22, textAlign: "center" }}>{s.icon}</span>
-                <span style={{ fontSize: 12, fontFamily: "var(--font-ui)" }}>{s.label}</span>
+                <EventThumb id={s.id} color={cat.color} size={46} />
+                <span style={{ fontSize: 9, fontFamily: "var(--font-ui)", color: isSel ? cat.color : "var(--text-secondary)", lineHeight: 1.3, letterSpacing: "0.02em" }}>{s.label}</span>
               </button>
             );
           })}
@@ -1141,15 +1421,28 @@ const StampSection = ({ cat, selectedId, onSelect }) => {
 };
 
 // ── STAMP ICONS ───────────────────────────────────────────────────────
+const BlobMapIcon = ({ blob }) => (
+  <div style={{
+    position: "absolute",
+    left: `${blob.x}%`, top: `${blob.y}%`,
+    transform: "translate(-50%, -62%)",
+    pointerEvents: "none", zIndex: 6,
+  }}>
+    <svg width={54} height={54} viewBox="0 0 80 80" style={{ overflow: "visible", filter: `drop-shadow(0 0 8px rgba(${blob.color},0.7))` }}>
+      <polygon points={_prgt} fill="#0A0820" opacity={0.9}/>
+      <polygon points={_plft} fill="#130D30" opacity={0.9}/>
+      <polygon points={_ptop} fill="#1E1248" opacity={0.9}/>
+      <polygon points={_ptop} fill="none" stroke={`rgba(${blob.color},0.9)`} strokeWidth={1.4}/>
+      <EventArt id={blob.stampId || blob.kind} cx={_pcx} ty={_pty} cy={_pcy}/>
+    </svg>
+  </div>
+);
+
 const PressureIconsSVG = ({ blobs, cursorPos, previewStamp }) => (
-  <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 5 }}>
-    {blobs.map(b => (
-      <foreignObject key={`fo-${b.id}`} x={`calc(${b.x}% - 14px)`} y={`calc(${b.y}% - 14px)`} width="28" height="28" style={{ pointerEvents: "none" }}>
-        <div style={{ width: 28, height: 28, borderRadius: "50%", background: `rgba(${b.color},0.85)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, boxShadow: `0 0 12px rgba(${b.color},0.6)`, border: "1.5px solid rgba(255,255,255,0.15)" }}>{b.stamp}</div>
-      </foreignObject>
-    ))}
+  <>
+    {blobs.map(b => <BlobMapIcon key={`bi-${b.id}`} blob={b}/>)}
     {previewStamp && cursorPos && (
-      <g style={{ pointerEvents: "none" }}>
+      <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 5 }}>
         <defs>
           <radialGradient id="prev-grad" cx="50%" cy="50%">
             <stop offset="0%"   stopColor={`rgba(${previewStamp.categoryRgb},0.35)`}/>
@@ -1158,9 +1451,9 @@ const PressureIconsSVG = ({ blobs, cursorPos, previewStamp }) => (
         </defs>
         <circle cx={`${cursorPos.x}%`} cy={`${cursorPos.y}%`} r={previewStamp.radius || 120} fill="url(#prev-grad)" style={{ mixBlendMode: "screen" }}/>
         <circle cx={`${cursorPos.x}%`} cy={`${cursorPos.y}%`} r={previewStamp.radius || 120} fill="none" stroke={previewStamp.categoryColor} strokeWidth="1.5" strokeDasharray="4 5" opacity="0.85"/>
-      </g>
+      </svg>
     )}
-  </svg>
+  </>
 );
 
 // ── HELPERS ───────────────────────────────────────────────────────────
@@ -1190,42 +1483,155 @@ const btnStyle = (kind) => ({
 });
 
 // ── STAMP DETAIL ──────────────────────────────────────────────────────
-const StampDetailCard = ({ blob, onClose, onRemove }) => {
-  const blobRgb = blob.color, blobSolid = `rgb(${blobRgb})`, blobA = (a) => `rgba(${blobRgb},${a})`;
+const StampDetailCard = ({ blob, leftOffset, onClose, onRemove, onUpdate }) => {
+  const blobSolid = `rgb(${blob.color})`;
+  const blobA = (a) => `rgba(${blob.color},${a})`;
+  const [editingName, setEditingName] = React.useState(false);
+  const [name, setName]               = React.useState(blob.label);
+  const [desc, setDesc]               = React.useState(blob.description || "");
+  const [aiLoading, setAiLoading]     = React.useState(false);
+  const [showKey, setShowKey]         = React.useState(false);
+  const [keyInput, setKeyInput]       = React.useState("");
+
+  const commit = (n, d) => onUpdate && onUpdate({ label: n ?? name, description: d ?? desc });
+  const saveName = () => { setEditingName(false); commit(name, null); };
+
+  const handleAI = async () => {
+    const key = localStorage.getItem("anthropic-key");
+    if (!key) { setShowKey(true); return; }
+    setAiLoading(true);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": key, "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001", max_tokens: 180,
+          messages: [{ role: "user", content:
+            `Cantina Universe — dark sci-fi/fantasy world simulation.\n` +
+            `Write 2–3 sentences of vivid strategic lore for this event: "${name}" (type: ${blob.kind}, radius: ${Math.round(blob.r*1.5)}km, severity: ${blob.severity}/10).\n` +
+            `Focus on immediate danger, affected population, and geopolitical consequence. Be specific, not generic.`
+          }],
+        }),
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || "";
+      setDesc(text); commit(null, text);
+    } catch (e) { console.error(e); }
+    setAiLoading(false);
+  };
+
+  const saveKey = () => {
+    if (keyInput.trim()) {
+      localStorage.setItem("anthropic-key", keyInput.trim());
+      setKeyInput(""); setShowKey(false); handleAI();
+    }
+  };
+
   return (
     <div style={{
-      position: "absolute", left: 88, top: 92, width: 268,
-      background: "rgba(8,8,16,0.95)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
-      border: `1px solid ${blobA(0.3)}`, borderLeft: `3px solid ${blobSolid}`,
-      borderRadius: 12, padding: "16px 18px", zIndex: 30,
-      boxShadow: `0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px ${blobA(0.15)}`, fontFamily: "var(--font-ui)",
+      position: "absolute", left: leftOffset || 88, top: 88, width: 284, zIndex: 50,
+      background: "rgba(7,5,22,0.97)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)",
+      border: `1px solid ${blobA(0.35)}`, borderLeft: `3px solid ${blobSolid}`,
+      borderRadius: 12, padding: "16px 18px",
+      boxShadow: `0 12px 40px rgba(0,0,0,0.8), 0 0 0 1px ${blobA(0.15)}`,
+      fontFamily: "var(--font-ui)",
     }}>
-      <div style={{ fontSize: 10, color: blobSolid, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 6 }}>{blob.kind}</div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: "50%", background: blobA(0.85), display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, boxShadow: `0 0 14px ${blobA(0.6)}` }}>{blob.stamp}</div>
-          <div style={{ fontSize: 15, color: "var(--text-primary)", fontWeight: 600 }}>{blob.label}</div>
+      {/* Type tag */}
+      <div style={{ fontSize: 9, color: blobSolid, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 10 }}>
+        {blob.kind.replace("-", " ")} · {Math.round(blob.r * 1.5)}KM RADIUS
+      </div>
+
+      {/* Header: art + editable name */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div style={{ width: 38, height: 38, flexShrink: 0, background: "rgba(255,255,255,0.04)", borderRadius: 8, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <svg width={34} height={34} viewBox="0 0 80 80" style={{ overflow: "visible" }}>
+            <polygon points={_ptop} fill="#1E1248"/>
+            <polygon points={_ptop} fill="none" stroke={blobSolid} strokeWidth={1.2}/>
+            <EventArt id={blob.stampId || blob.kind} cx={_pcx} ty={_pty} cy={_pcy}/>
+          </svg>
         </div>
-        <button onClick={onClose} style={{ background: "transparent", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: 14, padding: 0 }}>✕</button>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 11 }}>
-        <Row label="Severity"><SeverityBar value={blob.severity} color={blobSolid}/></Row>
-        <Row label="Radius"><span style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>{Math.round(blob.r * 1.5)}km</span></Row>
-        <Row label="Spreading"><span style={{ color: blob.spreading ? "#2DFF78" : "var(--text-dim)", fontFamily: "var(--font-mono)" }}>{blob.spreading ? "YES · +2%/hr" : "STATIC"}</span></Row>
-      </div>
-      {blob.characters?.length > 0 && (
-        <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #1A1A2E" }}>
-          <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", letterSpacing: "0.18em", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: 8 }}>Affected</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {blob.characters.map(name => (
-              <span key={name} style={{ fontSize: 11, padding: "2px 10px", borderRadius: 999, background: blobA(0.08), color: blobSolid, border: `1px solid ${blobA(0.4)}` }}>{name}</span>
-            ))}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {editingName ? (
+            <input autoFocus value={name} onChange={e => setName(e.target.value)}
+              onBlur={saveName}
+              onKeyDown={e => { if(e.key==="Enter") saveName(); if(e.key==="Escape"){setName(blob.label);setEditingName(false);}}}
+              style={{ width:"100%", boxSizing:"border-box", background:"rgba(255,255,255,0.07)", border:`1px solid ${blobA(0.5)}`, borderRadius:6, padding:"4px 8px", color:"#F0F0FF", fontFamily:"var(--font-ui)", fontSize:14, fontWeight:700, outline:"none" }}
+            />
+          ) : (
+            <div onClick={() => setEditingName(true)} title="Click to rename"
+              style={{ fontSize:14, fontWeight:700, color:"#F0F0FF", cursor:"text", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", borderBottom:"1px dashed transparent", transition:"border-color 0.15s, color 0.15s" }}
+              onMouseEnter={e=>{e.currentTarget.style.borderBottomColor=blobA(0.55);e.currentTarget.style.color=blobSolid;}}
+              onMouseLeave={e=>{e.currentTarget.style.borderBottomColor="transparent";e.currentTarget.style.color="#F0F0FF";}}
+            >{name}</div>
+          )}
+          <div style={{ fontSize:10, color:"var(--text-dim)", marginTop:2 }}>
+            {blob.spreading ? "SPREADING · +2%/HR" : "STATIC EVENT"}
           </div>
         </div>
+        <button onClick={onClose} style={{ flexShrink:0, background:"transparent", border:"none", color:"var(--text-dim)", cursor:"pointer", fontSize:14, padding:"0 0 0 6px" }}>✕</button>
+      </div>
+
+      {/* Stats */}
+      <div style={{ marginBottom: 12 }}>
+        <Row label="Severity"><SeverityBar value={blob.severity} color={blobSolid}/></Row>
+      </div>
+
+      {/* Characters */}
+      {blob.characters?.length > 0 && (
+        <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:12 }}>
+          {blob.characters.map(n => (
+            <span key={n} style={{ fontSize:10, padding:"2px 8px", borderRadius:999, background:blobA(0.08), color:blobSolid, border:`1px solid ${blobA(0.4)}` }}>{n}</span>
+          ))}
+        </div>
       )}
-      <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
-        <button style={btnStyle("ghost")}>Edit</button>
-        <button style={btnStyle("danger")} onClick={onRemove}>Remove</button>
+
+      {/* Description textarea */}
+      <textarea value={desc} onChange={e => { setDesc(e.target.value); commit(null, e.target.value); }}
+        placeholder={`Add lore, notes, or strategic context for this ${name}…`} rows={4}
+        style={{ width:"100%", boxSizing:"border-box", marginBottom:10,
+          background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)",
+          borderRadius:8, padding:"10px 12px", color:"#D0C8FF",
+          fontFamily:"var(--font-ui)", fontSize:11, lineHeight:1.55, resize:"vertical",
+          outline:"none", transition:"border-color 0.15s" }}
+        onFocus={e=>e.target.style.borderColor=blobA(0.5)}
+        onBlur={e=>e.target.style.borderColor="rgba(255,255,255,0.08)"}
+      />
+
+      {/* API key prompt */}
+      {showKey && (
+        <div style={{ display:"flex", gap:6, marginBottom:10 }}>
+          <input autoFocus placeholder="sk-ant-… Anthropic API key"
+            value={keyInput} onChange={e=>setKeyInput(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&saveKey()}
+            style={{ flex:1, background:"rgba(255,255,255,0.06)", border:`1px solid ${blobA(0.4)}`, borderRadius:6, padding:"6px 10px", color:"#E0D8FF", fontFamily:"var(--font-mono)", fontSize:10, outline:"none" }}
+          />
+          <button onClick={saveKey} style={{ padding:"6px 10px", background:blobA(0.25), border:`1px solid ${blobA(0.5)}`, borderRadius:6, color:"#E0E0FF", cursor:"pointer", fontSize:10 }}>OK</button>
+          <button onClick={()=>setShowKey(false)} style={{ padding:"6px 8px", background:"transparent", border:"1px solid rgba(255,255,255,0.1)", borderRadius:6, color:"var(--text-dim)", cursor:"pointer", fontSize:10 }}>✕</button>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div style={{ display:"flex", gap:8 }}>
+        <button onClick={handleAI} disabled={aiLoading} style={{
+          flex:2, height:32, borderRadius:8, border:`1px solid ${blobA(0.5)}`,
+          background: aiLoading ? blobA(0.05) : blobA(0.2),
+          color: aiLoading ? blobA(0.5) : "#E0DDFF",
+          fontSize:10, fontFamily:"var(--font-ui)", letterSpacing:"0.05em", cursor:"pointer",
+          display:"flex", alignItems:"center", justifyContent:"center", gap:6, transition:"all 0.15s",
+        }}>
+          {aiLoading
+            ? <><span style={{ width:10,height:10,borderRadius:"50%",border:`1.5px solid ${blobA(0.6)}`,borderTopColor:blobSolid,display:"inline-block",animation:"spin 0.7s linear infinite" }}/> GENERATING</>
+            : "✦ AI PREFILL"}
+        </button>
+        <button onClick={onRemove} style={{
+          flex:1, height:32, borderRadius:8, border:"1px solid rgba(204,34,0,0.4)",
+          background:"transparent", color:"#FF6B5B", fontSize:10, fontFamily:"var(--font-ui)",
+          letterSpacing:"0.04em", cursor:"pointer",
+        }}>REMOVE</button>
       </div>
     </div>
   );
@@ -1391,7 +1797,7 @@ const WorldMap = () => {
     const rect = mapOuterRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    const newBlob = { id: `u${Date.now()}`, kind: selectedStamp.id, label: selectedStamp.label, x, y, r: selectedStamp.radius || 120, color: selectedStamp.categoryRgb, intensity: 0.55, stamp: selectedStamp.icon, severity: 7, spreading: !!selectedStamp.spreading, characters: [] };
+    const newBlob = { id: `u${Date.now()}`, kind: selectedStamp.id, stampId: selectedStamp.id, label: selectedStamp.label, x, y, r: selectedStamp.radius || 120, color: selectedStamp.categoryRgb, intensity: 0.55, severity: 7, spreading: !!selectedStamp.spreading, characters: [] };
     setBlobs(b => [...b, newBlob]);
     setSelectedBlob(newBlob);
     setSelectedStamp(null); setCursorPos(null);
@@ -1737,7 +2143,18 @@ const WorldMap = () => {
       </div>
 
       {/* STAMP DETAIL */}
-      {selectedBlob && <StampDetailCard blob={selectedBlob} onClose={() => setSelectedBlob(null)} onRemove={() => removeBlob(selectedBlob.id)} />}
+      {selectedBlob && (
+        <StampDetailCard
+          blob={selectedBlob}
+          leftOffset={leftOpen ? PANEL_W + 12 : 12}
+          onClose={() => setSelectedBlob(null)}
+          onRemove={() => removeBlob(selectedBlob.id)}
+          onUpdate={(d) => {
+            setBlobs(prev => prev.map(b => b.id === selectedBlob.id ? { ...b, ...d } : b));
+            setSelectedBlob(prev => ({ ...prev, ...d }));
+          }}
+        />
+      )}
 
       {/* PRESENCE STRIP */}
       <PresenceStrip chars={CHARACTERS_MAP} activeChar={activeChar} leftOpen={leftOpen}
@@ -1756,7 +2173,7 @@ const WorldMap = () => {
       {/* STAMP PLACEMENT LABEL */}
       {selectedStamp && (
         <div style={{ position: "fixed", top: 18, left: "50%", transform: "translateX(-50%)", zIndex: 50, background: "rgba(15,15,26,0.92)", backdropFilter: "blur(8px)", border: `1px solid ${selectedStamp.categoryColor}`, borderRadius: 10, padding: "8px 14px", fontFamily: "var(--font-ui)", fontSize: 12, color: "var(--text-primary)", display: "inline-flex", alignItems: "center", gap: 8, boxShadow: `0 0 24px ${selectedStamp.categoryColor}40` }}>
-          <span style={{ fontSize: 14 }}>{selectedStamp.icon}</span>
+          <EventThumb id={selectedStamp.id} color={selectedStamp.categoryColor} size={28}/>
           <span>Placing: <strong>{selectedStamp.label}</strong></span>
           <span style={{ color: "var(--text-dim)", fontFamily: "var(--font-mono)", fontSize: 10 }}>· Click on map · ESC to cancel</span>
         </div>
