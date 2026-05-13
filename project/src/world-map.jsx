@@ -61,7 +61,8 @@ const TERRAIN_MAP = Array.from({ length: GRID_SIZE }, (_, r) =>
     return "plains";
   })
 );
-const getTerrain = (col, row) => TERRAIN_MAP[row]?.[col] || "plains";
+// terrainOverrides is passed in from component state; these getters are used in render
+const getTerrain = (col, row, overrides = {}) => overrides[`${col},${row}`] || TERRAIN_MAP[row]?.[col] || "plains";
 
 // Universe 2 — alternate seeded terrain for the second reality layer
 const TERRAIN_MAP_2 = Array.from({ length: GRID_SIZE }, (_, r) =>
@@ -74,7 +75,7 @@ const TERRAIN_MAP_2 = Array.from({ length: GRID_SIZE }, (_, r) =>
     return "plains";
   })
 );
-const getTerrain2 = (col, row) => TERRAIN_MAP_2[row]?.[col] || "plains";
+const getTerrain2 = (col, row, overrides = {}) => overrides[`${col},${row}`] || TERRAIN_MAP_2[row]?.[col] || "plains";
 
 // Pre-sorted tile render order (painter's algorithm: back to front)
 const SORTED_TILES = (() => {
@@ -138,12 +139,12 @@ const STAMP_CATEGORIES = [
 ];
 
 const INITIAL_BLOBS = [
-  { id: "b1", kind: "trauma",   stampId: "hurricane", label: "World Engine Event",     x: 38, y: 44, r: 220, color: "0,212,170",  intensity: 0.7,  severity: 9, characters: ["Kal-El", "Lois"] },
-  { id: "b2", kind: "power",    stampId: "wealth",    label: "LexCorp Influence",      x: 41, y: 50, r: 150, color: "201,168,76", intensity: 0.55, severity: 7, characters: ["Lex"]           },
-  { id: "b3", kind: "conflict", stampId: "military",  label: "Gotham Active Conflict", x: 50, y: 56, r: 170, color: "204,34,0",   intensity: 0.65, severity: 8, characters: ["Bruce"]         },
-  { id: "b4", kind: "bio",      stampId: "pandemic",  label: "Outbreak Vector",        x: 64, y: 38, r: 200, color: "45,255,120", intensity: 0.5,  severity: 6, spreading: true, characters: ["Lois"] },
-  { id: "b5", kind: "power",    stampId: "poverty",   label: "Smallville Rural",       x: 28, y: 62, r: 100, color: "201,168,76", intensity: 0.3,  severity: 3, characters: ["Jonathan"]      },
-  { id: "b6", kind: "cosmic",   stampId: "radiation", label: "Kryptonite Deposit",     x: 78, y: 58, r: 80,  color: "123,47,255", intensity: 0.55, severity: 7, characters: []                },
+  { id: "b1", stampId: "hurricane", label: "World Engine Event",     col: 8,  row: 10, r: 220, color: "0,212,170",  severity: 9, characters: ["Kal-El", "Lois"] },
+  { id: "b2", stampId: "wealth",    label: "LexCorp Influence",      col: 12, row: 12, r: 150, color: "201,168,76", severity: 7, characters: ["Lex"] },
+  { id: "b3", stampId: "military",  label: "Gotham Active Conflict", col: 14, row: 14, r: 170, color: "204,34,0",   severity: 8, characters: ["Bruce"] },
+  { id: "b4", stampId: "pandemic",  label: "Outbreak Vector",        col: 18, row: 8,  r: 200, color: "45,255,120", severity: 6, spreading: true, characters: ["Lois"] },
+  { id: "b5", stampId: "poverty",   label: "Smallville Rural",       col: 6,  row: 16, r: 100, color: "201,168,76", severity: 3, characters: ["Jonathan"] },
+  { id: "b6", stampId: "radiation", label: "Kryptonite Deposit",     col: 20, row: 6,  r: 80,  color: "123,47,255", severity: 7, characters: [] },
 ];
 
 const CHARACTERS_MAP = [
@@ -153,15 +154,6 @@ const CHARACTERS_MAP = [
   { id: "lois",  name: "Lois",     col: 9,  row: 11, color: "240,208,128", img: "assets/lois.jpg",                  status: "active",    state: "Fear 68%"    },
   { id: "zod",   name: "Zod",      col: 20, row: 5,  color: "204,34,0",    img: "assets/char-batman2.webp",         status: "inactive",  state: "—"           },
   { id: "jon",   name: "Jonathan", col: 6,  row: 16, color: "212,136,76",  img: "assets/char-robin.jpeg",           status: "deceased",  state: "Deceased"    },
-];
-
-const LAYERS_DATA = [
-  { id: "social",      label: "SOCIAL COHESION",     color: "#00C9A7", blendColor: "rgba(0,201,167,0.12)",   active: true  },
-  { id: "economic",    label: "ECONOMIC PRESSURE",   color: "#C9A84C", blendColor: "rgba(201,168,76,0.12)",  active: true  },
-  { id: "biological",  label: "BIOLOGICAL BASELINE", color: "#2DFF78", blendColor: "rgba(45,255,120,0.10)",  active: true  },
-  { id: "political",   label: "POLITICAL CONTROL",   color: "#FFB347", blendColor: "rgba(255,179,71,0.10)",  active: false },
-  { id: "trauma",      label: "TRAUMA MEMORY",       color: "#00D4FF", blendColor: "rgba(0,212,255,0.08)",   active: true  },
-  { id: "sensitivity", label: "SENSITIVITY MAP",     color: "#E0B0FF", blendColor: "rgba(224,176,255,0.10)", active: false },
 ];
 
 // ── WORLD ELEMENTS ────────────────────────────────────────────────────
@@ -198,24 +190,6 @@ const PIECE_CATEGORIES = [
   { id: "power",          label: "POWER",       color: "#E0B0FF" },
   { id: "infrastructure", label: "INFRA",       color: "#C9A84C" },
 ];
-
-// ── BLOBS + LAYERS ────────────────────────────────────────────────────
-const BLOB_COLORS = {
-  trauma:   { core: "rgba(0,212,255,0.7)",   mid: "rgba(0,150,200,0.3)"   },
-  conflict: { core: "rgba(204,34,0,0.8)",    mid: "rgba(150,20,0,0.35)"   },
-  power:    { core: "rgba(201,168,76,0.6)",  mid: "rgba(150,120,40,0.25)" },
-  bio:      { core: "rgba(45,255,120,0.65)", mid: "rgba(20,180,80,0.3)"   },
-  cosmic:   { core: "rgba(123,47,255,0.7)",  mid: "rgba(80,20,200,0.3)"   },
-};
-
-const LAYER_POSITIONS = {
-  social:      { cx: "50%", cy: "50%", rx: "60%", ry: "40%" },
-  economic:    { cx: "45%", cy: "40%", rx: "40%", ry: "30%" },
-  biological:  { cx: "55%", cy: "55%", rx: "50%", ry: "45%" },
-  political:   { cx: "45%", cy: "45%", rx: "45%", ry: "35%" },
-  trauma:      { cx: "47%", cy: "38%", rx: "25%", ry: "20%" },
-  sensitivity: { cx: "50%", cy: "50%", rx: "55%", ry: "50%" },
-};
 
 // ── ANIMATION CSS ─────────────────────────────────────────────────────
 const animCSS = `
@@ -345,7 +319,7 @@ const TerrainFeature = ({ terrain, x, y }) => {
 };
 
 // ── ISO TILE (SVG polygon group) ──────────────────────────────────────
-const IsoTile = React.memo(({ col, row, terrain, highlighted, invalid, onEnter, onLeave, onDragOver, onDrop }) => {
+const IsoTile = React.memo(({ col, row, terrain, highlighted, invalid, onEnter, onLeave, onDragOver, onDrop, onTileClick }) => {
   const { x, y } = isoToScreen(col, row);
   const hw = TILE_W / 2, hh = TILE_H / 2;
   const D = TILE_DEPTH;
@@ -384,6 +358,7 @@ const IsoTile = React.memo(({ col, row, terrain, highlighted, invalid, onEnter, 
       <polygon points={top} fill="transparent"
         onMouseEnter={onEnter} onMouseLeave={onLeave}
         onDragOver={onDragOver} onDrop={onDrop}
+        onClick={onTileClick}
         style={{ cursor: "default" }}
       />
     </g>
@@ -1221,137 +1196,111 @@ const PieceDetailCard = ({ piece, details, leftOffset, onClose, onRemove, onUpda
   );
 };
 
-// ── PRESSURE BLOBS ────────────────────────────────────────────────────
-const PressureBlobsLayer = ({ blobs, selectedId, onSelect }) => (
-  <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 2 }}>
-    {blobs.map((blob, index) => {
-      const colors = BLOB_COLORS[blob.kind] || BLOB_COLORS.trauma;
-      const isSelected = selectedId === blob.id;
-      return (
-        <div key={blob.id} className={`wpm-blob wpm-blob-${blob.kind}`}
-          style={{
-            position: "absolute", left: `${blob.x}%`, top: `${blob.y}%`,
-            width: `${blob.r * 2}px`, height: `${blob.r * 2}px`,
-            transform: "translate(-50%, -50%)", mixBlendMode: "screen",
-            background: `radial-gradient(ellipse at center, ${colors.core} 0%, ${colors.mid} 35%, transparent 70%)`,
-            animation: `blobBreath ${3 + index * 0.7}s ease-in-out infinite alternate`,
-            borderRadius: "50%", pointerEvents: "all", cursor: "pointer",
-          }}
-          onClick={(e) => { e.stopPropagation(); onSelect(blob); }}
-        >
-          {isSelected && (
-            <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `1.5px solid rgba(${blob.color},0.7)`, boxSizing: "border-box" }} />
-          )}
-        </div>
-      );
-    })}
-  </div>
-);
-
-// ── LAYER MAP OVERLAYS ────────────────────────────────────────────────
-const LayerMapOverlay = ({ layer }) => {
-  const pos = LAYER_POSITIONS[layer.id] || LAYER_POSITIONS.social;
-  const gradId = `lg-${layer.id}`;
+// ── PLACED BLOB (tile-based, positioned via isoToScreen) ──────────────
+const PlacedBlob = ({ blob, isSelected, onClick, onDragStart }) => {
+  const { x, y } = isoToScreen(blob.col, blob.row);
+  const cx = x + TILE_W / 2;
+  const cy = y + TILE_H / 2;
+  const bw = blob.r * 1.2;
+  const bh = blob.r * 0.6;
   return (
-    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 3, animation: "layerFadeIn 0.3s ease forwards" }}>
-      <svg width="100%" height="100%" style={{ position: "absolute", inset: 0 }}>
-        <defs>
-          <radialGradient id={gradId} cx={pos.cx} cy={pos.cy} r="50%">
-            <stop offset="0%"   stopColor={layer.color} stopOpacity="0.14" />
-            <stop offset="100%" stopColor={layer.color} stopOpacity="0"    />
-          </radialGradient>
-        </defs>
-        <ellipse cx={pos.cx} cy={pos.cy} rx={pos.rx} ry={pos.ry} fill={`url(#${gradId})`} />
-      </svg>
+    <div
+      draggable
+      onDragStart={(e) => {
+        const empty = new Image();
+        empty.src = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+        e.dataTransfer.setDragImage(empty, 0, 0);
+        onDragStart(blob);
+      }}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      style={{
+        position: "absolute",
+        left: cx - bw / 2,
+        top: cy - bh / 2,
+        width: bw,
+        height: bh,
+        pointerEvents: "auto",
+        cursor: "pointer",
+        zIndex: 8,
+      }}
+    >
+      {/* Glow ellipse */}
+      <div style={{
+        position: "absolute", inset: 0, borderRadius: "50%",
+        background: `radial-gradient(ellipse at center, rgba(${blob.color},0.35) 0%, rgba(${blob.color},0.1) 50%, transparent 80%)`,
+        mixBlendMode: "screen", opacity: 0.18,
+        animation: `blobBreath 3s ease-in-out infinite alternate`,
+      }} />
+      {isSelected && (
+        <div style={{
+          position: "absolute", inset: 0, borderRadius: "50%",
+          border: `1.5px solid rgba(${blob.color},0.7)`, boxSizing: "border-box",
+        }} />
+      )}
+      {/* Event art icon centered on tile */}
+      <div style={{
+        position: "absolute",
+        left: bw / 2 - 27,
+        top: bh / 2 - 27,
+        pointerEvents: "none",
+      }}>
+        <svg width={54} height={54} viewBox="0 0 80 80" style={{ overflow: "visible", filter: `drop-shadow(0 0 8px rgba(${blob.color},0.7))` }}>
+          <polygon points={_prgt} fill="#0A0820" opacity={0.9}/>
+          <polygon points={_plft} fill="#130D30" opacity={0.9}/>
+          <polygon points={_ptop} fill="#1E1248" opacity={0.9}/>
+          <polygon points={_ptop} fill="none" stroke={`rgba(${blob.color},0.9)`} strokeWidth={1.4}/>
+          <EventArt id={blob.stampId} cx={_pcx} ty={_pty} cy={_pcy}/>
+        </svg>
+      </div>
     </div>
   );
 };
 
-// ── LAYER PANEL ───────────────────────────────────────────────────────
-const LayerPanel = ({ layers, onToggle, mapMode, onModeChange, open, onToggleOpen }) => {
-  const activeLayers = layers.filter(l => l.active);
+// ── TILE DETAIL CARD ──────────────────────────────────────────────────
+const TERRAIN_OPTIONS = ["plains", "hills", "water", "forest", "urban"];
+const TileDetailCard = ({ tile, leftOffset, onClose, onSetTerrain, onReset }) => {
   return (
     <div style={{
-      position: "absolute", top: 16, right: 16, width: 256,
-      background: "rgba(8,8,16,0.92)", border: "1px solid #1A1A2E",
-      borderRadius: 12, zIndex: 50, backdropFilter: "blur(12px)",
-      WebkitBackdropFilter: "blur(12px)", overflow: "hidden",
+      position: "absolute", left: leftOffset, top: 88, width: 260, zIndex: 50,
+      background: "rgba(7,5,22,0.97)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)",
+      border: "1px solid rgba(110,65,255,0.35)", borderLeft: "3px solid rgba(110,65,255,0.8)",
+      borderRadius: 12, padding: "16px 18px",
+      boxShadow: "0 12px 40px rgba(0,0,0,0.8)",
+      fontFamily: "var(--font-ui)",
     }}>
-      <button onClick={onToggleOpen} style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        width: "100%", padding: "12px 16px", background: "transparent", border: "none", cursor: "pointer",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 10, color: "#6B6B8A", letterSpacing: "0.15em", textTransform: "uppercase", fontFamily: "var(--font-ui)" }}>MAP LAYERS</span>
-          <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", background: "rgba(0,201,167,0.15)", color: "#00C9A7", border: "1px solid rgba(0,201,167,0.3)", borderRadius: 999, padding: "1px 7px" }}>
-            {activeLayers.length}
-          </span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ fontSize: 9, color: "rgba(110,65,255,0.9)", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+          TILE ({tile.col}, {tile.row})
         </div>
-        <span style={{ color: "#6B6B8A", fontSize: 16, lineHeight: 1, fontWeight: 300 }}>{open ? "-" : "+"}</span>
-      </button>
-      {open && (
-        <div style={{ padding: "0 16px 16px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 14 }}>
-            {[{ id: "pressure", label: "PRESSURE" }, { id: "landscape", label: "ISO GRID" }].map(mode => (
-              <button key={mode.id} onClick={() => onModeChange(mode.id)} style={{
-                padding: "7px 0",
-                background: mapMode === mode.id ? "rgba(0,201,167,0.08)" : "transparent",
-                border: `1px solid ${mapMode === mode.id ? "#00C9A7" : "#1A1A2E"}`,
-                borderRadius: 8, color: mapMode === mode.id ? "#00C9A7" : "#6B6B8A",
-                fontSize: 10, fontWeight: 600, letterSpacing: "0.08em",
-                cursor: "pointer", fontFamily: "var(--font-ui)",
-              }}>
-                {mode.label}
-              </button>
-            ))}
-          </div>
-          <div style={{ height: 1, background: "#1A1A2E", marginBottom: 12 }} />
-          <div style={{ fontSize: 10, color: "#6B6B8A", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
-            <span>LAYERS</span>
-            <button onClick={() => layers.forEach(l => onToggle(l.id, false))} style={{ background: "transparent", border: "none", color: "#6B6B8A", fontSize: 10, cursor: "pointer" }}>CLEAR</button>
-          </div>
-          {layers.map((layer, index) => (
-            <div key={layer.id}
-              style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: index < layers.length - 1 ? "1px solid #0F0F1A" : "none", cursor: "pointer" }}
-              onClick={() => onToggle(layer.id, !layer.active)}
+        <button onClick={onClose} style={{ background: "transparent", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: 14 }}>✕</button>
+      </div>
+      <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 12 }}>
+        Terrain: <span style={{ color: "#C0B0FF", fontFamily: "var(--font-mono)" }}>{tile.terrain}</span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+        {TERRAIN_OPTIONS.map(t => {
+          const td = TERRAIN_3D[t];
+          const isCur = tile.terrain === t;
+          return (
+            <div key={t} onClick={() => onSetTerrain(t)}
+              style={{
+                display: "flex", alignItems: "center", gap: 8, padding: "7px 10px",
+                background: isCur ? "rgba(110,65,255,0.15)" : "rgba(255,255,255,0.02)",
+                border: `1px solid ${isCur ? "rgba(110,65,255,0.6)" : "rgba(255,255,255,0.07)"}`,
+                borderRadius: 8, cursor: "pointer",
+              }}
             >
-              <div style={{
-                width: 15, height: 15, borderRadius: "50%", flexShrink: 0,
-                border: `2px solid ${layer.active ? layer.color : "#3A3A5C"}`,
-                background: layer.active ? layer.color : "transparent",
-                transition: "all 0.15s ease",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                animation: layer.active ? "layerPulse 2s ease-in-out infinite" : "none",
-              }}>
-                {layer.active && <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#080810" }} />}
-              </div>
-              <div style={{ flex: 1, fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", color: layer.active ? "#F0F0FF" : "#6B6B8A", fontFamily: "var(--font-ui)" }}>
-                {layer.label}
-              </div>
-              {layer.active && (
-                <div style={{ width: 3, height: 18, borderRadius: 2, background: layer.color, flexShrink: 0, animation: "layerPulse 2s ease-in-out infinite" }} />
-              )}
+              <div style={{ width: 18, height: 10, background: td.top, border: `1px solid ${td.line}`, borderRadius: 3, flexShrink: 0 }} />
+              <span style={{ fontSize: 10, color: isCur ? "#C090FF" : "var(--text-secondary)", fontFamily: "var(--font-ui)" }}>{t}</span>
             </div>
-          ))}
-          {activeLayers.length > 0 && (
-            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #1A1A2E" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                {activeLayers.map((layer, i) => (
-                  <div key={layer.id} style={{
-                    height: 7, borderRadius: 3,
-                    background: `linear-gradient(90deg, ${layer.color}40, ${layer.color}20)`,
-                    border: `1px solid ${layer.color}30`,
-                    transform: `translateY(${i * -1}px)`,
-                    opacity: Math.max(0.4, 1 - i * 0.1), position: "relative",
-                  }}>
-                    <div style={{ position: "absolute", right: 5, top: "50%", transform: "translateY(-50%)", width: 3, height: 3, borderRadius: "50%", background: layer.color }} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+          );
+        })}
+      </div>
+      <button onClick={onReset} style={{
+        width: "100%", padding: "7px 0", background: "transparent",
+        border: "1px solid var(--iron)", borderRadius: 8,
+        color: "var(--text-dim)", fontSize: 10, fontFamily: "var(--font-ui)", cursor: "pointer",
+      }}>Reset to default</button>
     </div>
   );
 };
@@ -1375,7 +1324,7 @@ const ZoomControls = ({ zoom, onZoomIn, onZoomOut, onReset }) => (
 );
 
 // ── STAMP SECTION ─────────────────────────────────────────────────────
-const StampSection = ({ cat, selectedId, onSelect }) => {
+const StampSection = ({ cat, onDragStart }) => {
   const [open, setOpen] = React.useState(true);
   return (
     <div style={{ marginBottom: 4 }}>
@@ -1393,68 +1342,38 @@ const StampSection = ({ cat, selectedId, onSelect }) => {
       </button>
       {open && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, padding: "4px 10px 10px" }}>
-          {cat.stamps.map(s => {
-            const isSel = selectedId === s.id;
-            return (
-              <button key={s.id}
-                onClick={() => onSelect(isSel ? null : { ...s, categoryColor: cat.color, categoryRgb: cat.colorRgb })}
-                style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-                  padding: "8px 6px 6px",
-                  background: isSel ? `${cat.color}14` : "rgba(255,255,255,0.02)",
-                  border: `1px solid ${isSel ? cat.color + "66" : "rgba(255,255,255,0.07)"}`,
-                  borderRadius: 10, cursor: "pointer", textAlign: "center",
-                  transition: "all 120ms ease",
-                }}
-                onMouseEnter={e => { if (!isSel) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor = cat.color + "33"; }}}
-                onMouseLeave={e => { if (!isSel) { e.currentTarget.style.background = "rgba(255,255,255,0.02)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; }}}
-              >
-                <EventThumb id={s.id} color={cat.color} size={46} />
-                <span style={{ fontSize: 9, fontFamily: "var(--font-ui)", color: isSel ? cat.color : "var(--text-secondary)", lineHeight: 1.3, letterSpacing: "0.02em" }}>{s.label}</span>
-              </button>
-            );
-          })}
+          {cat.stamps.map(s => (
+            <div
+              key={s.id}
+              draggable
+              onDragStart={(e) => {
+                const empty = new Image();
+                empty.src = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+                e.dataTransfer.setDragImage(empty, 0, 0);
+                onDragStart({ ...s, categoryColor: cat.color, categoryRgb: cat.colorRgb });
+              }}
+              onClick={() => {}}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor = cat.color + "33"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.02)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; }}
+              style={{
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                padding: "8px 6px 6px",
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: 10, cursor: "grab", textAlign: "center",
+                transition: "all 120ms ease",
+              }}
+            >
+              <EventThumb id={s.id} color={cat.color} size={46} />
+              <span style={{ fontSize: 9, fontFamily: "var(--font-ui)", color: "var(--text-secondary)", lineHeight: 1.3, letterSpacing: "0.02em" }}>{s.label}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 };
 
-// ── STAMP ICONS ───────────────────────────────────────────────────────
-const BlobMapIcon = ({ blob }) => (
-  <div style={{
-    position: "absolute",
-    left: `${blob.x}%`, top: `${blob.y}%`,
-    transform: "translate(-50%, -62%)",
-    pointerEvents: "none", zIndex: 6,
-  }}>
-    <svg width={54} height={54} viewBox="0 0 80 80" style={{ overflow: "visible", filter: `drop-shadow(0 0 8px rgba(${blob.color},0.7))` }}>
-      <polygon points={_prgt} fill="#0A0820" opacity={0.9}/>
-      <polygon points={_plft} fill="#130D30" opacity={0.9}/>
-      <polygon points={_ptop} fill="#1E1248" opacity={0.9}/>
-      <polygon points={_ptop} fill="none" stroke={`rgba(${blob.color},0.9)`} strokeWidth={1.4}/>
-      <EventArt id={blob.stampId || blob.kind} cx={_pcx} ty={_pty} cy={_pcy}/>
-    </svg>
-  </div>
-);
-
-const PressureIconsSVG = ({ blobs, cursorPos, previewStamp }) => (
-  <>
-    {blobs.map(b => <BlobMapIcon key={`bi-${b.id}`} blob={b}/>)}
-    {previewStamp && cursorPos && (
-      <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 5 }}>
-        <defs>
-          <radialGradient id="prev-grad" cx="50%" cy="50%">
-            <stop offset="0%"   stopColor={`rgba(${previewStamp.categoryRgb},0.35)`}/>
-            <stop offset="100%" stopColor={`rgba(${previewStamp.categoryRgb},0)`}/>
-          </radialGradient>
-        </defs>
-        <circle cx={`${cursorPos.x}%`} cy={`${cursorPos.y}%`} r={previewStamp.radius || 120} fill="url(#prev-grad)" style={{ mixBlendMode: "screen" }}/>
-        <circle cx={`${cursorPos.x}%`} cy={`${cursorPos.y}%`} r={previewStamp.radius || 120} fill="none" stroke={previewStamp.categoryColor} strokeWidth="1.5" strokeDasharray="4 5" opacity="0.85"/>
-      </svg>
-    )}
-  </>
-);
 
 // ── HELPERS ───────────────────────────────────────────────────────────
 const Row = ({ label, children }) => (
@@ -1512,7 +1431,7 @@ const StampDetailCard = ({ blob, leftOffset, onClose, onRemove, onUpdate }) => {
           model: "claude-haiku-4-5-20251001", max_tokens: 180,
           messages: [{ role: "user", content:
             `Cantina Universe — dark sci-fi/fantasy world simulation.\n` +
-            `Write 2–3 sentences of vivid strategic lore for this event: "${name}" (type: ${blob.kind}, radius: ${Math.round(blob.r*1.5)}km, severity: ${blob.severity}/10).\n` +
+            `Write 2–3 sentences of vivid strategic lore for this event: "${name}" (type: ${blob.stampId || "event"}, radius: ${Math.round(blob.r*1.5)}km, severity: ${blob.severity}/10).\n` +
             `Focus on immediate danger, affected population, and geopolitical consequence. Be specific, not generic.`
           }],
         }),
@@ -1542,7 +1461,7 @@ const StampDetailCard = ({ blob, leftOffset, onClose, onRemove, onUpdate }) => {
     }}>
       {/* Type tag */}
       <div style={{ fontSize: 9, color: blobSolid, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 10 }}>
-        {blob.kind.replace("-", " ")} · {Math.round(blob.r * 1.5)}KM RADIUS
+        {(blob.stampId || "event").replace("-", " ")} · {Math.round(blob.r * 1.5)}KM RADIUS
       </div>
 
       {/* Header: art + editable name */}
@@ -1681,19 +1600,14 @@ const PresenceStrip = ({ chars, activeChar, onSelect, leftOpen }) => {
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────
 const WorldMap = () => {
-  const [mapMode, setMapMode]               = React.useState("pressure");
-  const [layers, setLayers]                 = React.useState(LAYERS_DATA);
-  const [layerPanelOpen, setLayerPanelOpen] = React.useState(true);
   const [leftTab, setLeftTab]               = React.useState("elements");
   const [leftOpen, setLeftOpen]             = React.useState(true);
   const [zoom, setZoom]                     = React.useState(0.75);
   const [pan, setPan]                       = React.useState({ x: -ISO_SVG_W * 0.75 / 2, y: -ISO_SVG_H * 0.75 / 2 });
   const [isPanning, setIsPanning]           = React.useState(false);
-  const [selectedStamp, setSelectedStamp]   = React.useState(null);
   const [blobs, setBlobs]                   = React.useState(INITIAL_BLOBS);
   const [selectedBlob, setSelectedBlob]     = React.useState(null);
   const [activeChar, setActiveChar]         = React.useState("kal");
-  const [cursorPos, setCursorPos]           = React.useState(null);
   const [characterPositions, setCharacterPositions] = React.useState(() => {
     const init = {};
     CHARACTERS_MAP.forEach(c => { init[c.id] = { col: c.col, row: c.row }; });
@@ -1703,9 +1617,14 @@ const WorldMap = () => {
   const [highlightedTile, setHighlightedTile] = React.useState(null);
   const [draggingCharId, setDraggingCharId]   = React.useState(null);
   const [draggingPiece, setDraggingPiece]     = React.useState(null);
+  const [draggingStamp, setDraggingStamp]     = React.useState(null);
+  const [draggingBlob, setDraggingBlob]       = React.useState(null);
 
   const [selectedPieceId, setSelectedPieceId] = React.useState(null);
   const [pieceDetails, setPieceDetails]       = React.useState({});
+  const [terrainOverrides, setTerrainOverrides] = React.useState({});
+  const [selectedTile, setSelectedTile]       = React.useState(null);
+  const [history, setHistory]                 = React.useState([]);
 
   // ── UNIVERSE 2 ────────────────────────────────────────────────────────
   const [showUniverse2, setShowUniverse2]         = React.useState(false);
@@ -1719,6 +1638,9 @@ const WorldMap = () => {
   const setActivePieces = activeUniverse === 1 ? setPlacedPieces : setPlacedPieces2;
   const activeCharPos   = activeUniverse === 1 ? characterPositions : characterPositions2;
   const setActiveCharPos= activeUniverse === 1 ? setCharacterPositions : setCharacterPositions2;
+
+  // History helpers
+  const pushHistory = () => setHistory(prev => [...prev.slice(-19), { activePieces: [...(activeUniverse === 1 ? placedPieces : placedPieces2)], blobs: [...blobs], terrainOverrides: { ...terrainOverrides } }]);
 
   const mapOuterRef = React.useRef(null);
   const panRef      = React.useRef({ active: false, startX: 0, startY: 0, startPanX: 0, startPanY: 0 });
@@ -1766,16 +1688,12 @@ const WorldMap = () => {
     const s = new Set();
     activePieces.forEach(p => s.add(`${p.col},${p.row}`));
     Object.values(activeCharPos).forEach(pos => s.add(`${pos.col},${pos.row}`));
+    blobs.forEach(b => s.add(`${b.col},${b.row}`));
     return s;
-  }, [activePieces, activeCharPos]);
-
-  const activeLayers = layers.filter(l => l.active);
-  const handleLayerToggle = React.useCallback((id, active) => {
-    setLayers(prev => prev.map(l => l.id === id ? { ...l, active } : l));
-  }, []);
+  }, [activePieces, activeCharPos, blobs]);
 
   const handlePanStart = (e) => {
-    if (e.button !== 0 || selectedStamp) return;
+    if (e.button !== 0) return;
     if (e.target.closest('[draggable="true"]')) return;
     panRef.current = { active: true, startX: e.clientX, startY: e.clientY, startPanX: pan.x, startPanY: pan.y };
     setIsPanning(true);
@@ -1785,23 +1703,8 @@ const WorldMap = () => {
       const newPan = { x: panRef.current.startPanX + (e.clientX - panRef.current.startX), y: panRef.current.startPanY + (e.clientY - panRef.current.startY) };
       setPan(newPan); stateRef.current.pan = newPan;
     }
-    if (selectedStamp && mapOuterRef.current) {
-      const rect = mapOuterRef.current.getBoundingClientRect();
-      setCursorPos({ x: ((e.clientX - rect.left) / rect.width) * 100, y: ((e.clientY - rect.top) / rect.height) * 100 });
-    }
   };
   const handlePanEnd = () => { panRef.current.active = false; setIsPanning(false); };
-
-  const handleMapClick = (e) => {
-    if (!selectedStamp || !mapOuterRef.current) return;
-    const rect = mapOuterRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    const newBlob = { id: `u${Date.now()}`, kind: selectedStamp.id, stampId: selectedStamp.id, label: selectedStamp.label, x, y, r: selectedStamp.radius || 120, color: selectedStamp.categoryRgb, intensity: 0.55, severity: 7, spreading: !!selectedStamp.spreading, characters: [] };
-    setBlobs(b => [...b, newBlob]);
-    setSelectedBlob(newBlob);
-    setSelectedStamp(null); setCursorPos(null);
-  };
 
   const handleTileDrop = React.useCallback((tile) => {
     const key = `${tile.col},${tile.row}`;
@@ -1810,12 +1713,27 @@ const WorldMap = () => {
       setDraggingCharId(null);
     } else if (draggingPiece) {
       if (!occupiedTiles.has(key)) {
+        pushHistory();
         setActivePieces(prev => [...prev, { ...draggingPiece, col: tile.col, row: tile.row, instanceId: Date.now() }]);
       }
       setDraggingPiece(null);
+    } else if (draggingStamp) {
+      pushHistory();
+      const newBlob = {
+        id: `b${Date.now()}`, stampId: draggingStamp.id, label: draggingStamp.label,
+        col: tile.col, row: tile.row, r: draggingStamp.radius || 120,
+        color: draggingStamp.categoryRgb, severity: 7,
+        spreading: !!draggingStamp.spreading, characters: [],
+      };
+      setBlobs(prev => [...prev, newBlob]);
+      setSelectedBlob(newBlob);
+      setDraggingStamp(null);
+    } else if (draggingBlob) {
+      setBlobs(prev => prev.map(b => b.id === draggingBlob.id ? { ...b, col: tile.col, row: tile.row } : b));
+      setDraggingBlob(null);
     }
     setHighlightedTile(null);
-  }, [draggingCharId, draggingPiece, occupiedTiles, setActiveCharPos, setActivePieces]);
+  }, [draggingCharId, draggingPiece, draggingStamp, draggingBlob, occupiedTiles, setActiveCharPos, setActivePieces]);
 
   const centerOnTile = React.useCallback((col, row) => {
     const { zoom: z } = stateRef.current;
@@ -1825,7 +1743,51 @@ const WorldMap = () => {
     stateRef.current.pan = newPan; setPan(newPan);
   }, []);
 
-  const removeBlob = (id) => { setBlobs(b => b.filter(x => x.id !== id)); setSelectedBlob(null); };
+  const removeBlob = (id) => { pushHistory(); setBlobs(b => b.filter(x => x.id !== id)); setSelectedBlob(null); };
+
+  const handleUndo = () => {
+    setHistory(prev => {
+      if (!prev.length) return prev;
+      const last = prev[prev.length - 1];
+      setActivePieces(last.activePieces);
+      setBlobs(last.blobs);
+      setTerrainOverrides(last.terrainOverrides);
+      return prev.slice(0, -1);
+    });
+  };
+
+  const handleRandomize = () => {
+    pushHistory();
+    const allPieces = Object.values(WORLD_PIECES).flat();
+    const usedTiles = new Set();
+    const newPieces = [];
+    let attempts = 0;
+    while (newPieces.length < 10 && attempts < 200) {
+      attempts++;
+      const col = Math.floor(Math.random() * (GRID_SIZE - 2)) + 1;
+      const row = Math.floor(Math.random() * (GRID_SIZE - 2)) + 1;
+      const key = `${col},${row}`;
+      if (usedTiles.has(key)) continue;
+      usedTiles.add(key);
+      const piece = allPieces[Math.floor(Math.random() * allPieces.length)];
+      newPieces.push({ ...piece, col, row, instanceId: Date.now() + newPieces.length });
+    }
+    setActivePieces(newPieces);
+    const allStamps = STAMP_CATEGORIES.flatMap(c => c.stamps.map(s => ({ ...s, categoryRgb: c.colorRgb })));
+    const newBlobs = [];
+    for (let i = 0; i < 5; i++) {
+      const col = Math.floor(Math.random() * (GRID_SIZE - 4)) + 2;
+      const row = Math.floor(Math.random() * (GRID_SIZE - 4)) + 2;
+      const stamp = allStamps[Math.floor(Math.random() * allStamps.length)];
+      newBlobs.push({
+        id: `br${Date.now() + i}`, stampId: stamp.id, label: stamp.label,
+        col, row, r: stamp.radius || 120, color: stamp.categoryRgb,
+        severity: Math.floor(Math.random() * 6) + 4,
+        spreading: !!stamp.spreading, characters: [],
+      });
+    }
+    setBlobs(newBlobs);
+  };
 
   const handleSave = React.useCallback(() => {
     try {
@@ -1839,10 +1801,11 @@ const WorldMap = () => {
   // Keyboard shortcuts
   React.useEffect(() => {
     const onKey = (e) => {
-      if (e.key === "Escape") { setSelectedStamp(null); setSelectedBlob(null); setDraggingCharId(null); setDraggingPiece(null); setHighlightedTile(null); setCursorPos(null); }
+      if (e.key === "Escape") { setSelectedBlob(null); setDraggingCharId(null); setDraggingPiece(null); setDraggingStamp(null); setHighlightedTile(null); setSelectedTile(null); }
       if ((e.key === "Delete" || e.key === "Backspace") && selectedBlob && document.activeElement.tagName !== "INPUT") removeBlob(selectedBlob.id);
       if ((e.key === "=" || e.key === "+") && !e.metaKey && !e.ctrlKey) applyZoom(+0.1);
       if (e.key === "-" && !e.metaKey && !e.ctrlKey) applyZoom(-0.1);
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") { e.preventDefault(); handleUndo(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -1871,13 +1834,12 @@ const WorldMap = () => {
       {/* PAN/ZOOM OUTER */}
       <div
         ref={mapOuterRef}
-        style={{ position: "absolute", inset: 0, overflow: "hidden", cursor: selectedStamp ? "crosshair" : isPanning ? "grabbing" : "grab" }}
+        style={{ position: "absolute", inset: 0, overflow: "hidden", cursor: isPanning ? "grabbing" : "grab" }}
         onMouseDown={handlePanStart}
         onMouseMove={handleMouseMove}
         onMouseUp={handlePanEnd}
         onMouseLeave={handlePanEnd}
-        onClick={handleMapClick}
-        onDragEnd={() => { setDraggingCharId(null); setDraggingPiece(null); setHighlightedTile(null); }}
+        onDragEnd={() => { setDraggingCharId(null); setDraggingPiece(null); setDraggingStamp(null); setDraggingBlob(null); setHighlightedTile(null); }}
       >
         {/* PAN/ZOOM TRANSFORM — origin at viewport center */}
         <div style={{
@@ -1906,7 +1868,7 @@ const WorldMap = () => {
                 {SORTED_TILES.map(({ c, r }) => (
                   <IsoTile key={`u${activeUniverse === 1 ? 2 : 1}-${c}-${r}`}
                     col={c} row={r}
-                    terrain={activeUniverse === 1 ? getTerrain2(c, r) : getTerrain(c, r)}
+                    terrain={activeUniverse === 1 ? getTerrain2(c, r, terrainOverrides) : getTerrain(c, r, terrainOverrides)}
                     highlighted={false} invalid={false}
                     onEnter={()=>{}} onLeave={()=>{}} onDragOver={()=>{}} onDrop={()=>{}}
                   />
@@ -1918,23 +1880,30 @@ const WorldMap = () => {
               const isHl = highlightedTile?.col === c && highlightedTile?.row === r;
               const isOccupied = occupiedTiles.has(`${c},${r}`);
               const invalid = isHl && !!draggingPiece && isOccupied;
-              const terrain = activeUniverse === 1 ? getTerrain(c, r) : getTerrain2(c, r);
+              const terrain = activeUniverse === 1 ? getTerrain(c, r, terrainOverrides) : getTerrain2(c, r, terrainOverrides);
               return (
                 <IsoTile key={`t-${c}-${r}`}
                   col={c} row={r}
                   terrain={terrain}
                   highlighted={isHl && !invalid}
                   invalid={invalid}
-                  onEnter={() => { if (!selectedStamp) setHighlightedTile({ col: c, row: r }); }}
+                  onEnter={() => setHighlightedTile({ col: c, row: r })}
                   onLeave={() => setHighlightedTile(null)}
                   onDragOver={(e) => { e.preventDefault(); setHighlightedTile({ col: c, row: r }); }}
                   onDrop={(e) => { e.preventDefault(); handleTileDrop({ col: c, row: r }); }}
+                  onTileClick={() => {
+                    if (!draggingPiece && !draggingStamp && !draggingBlob && !draggingCharId) {
+                      setSelectedTile({ col: c, row: r, terrain });
+                      setSelectedBlob(null);
+                      setSelectedPieceId(null);
+                    }
+                  }}
                 />
               );
             })}
           </svg>
 
-          {/* OVERLAY: placed pieces + characters (same coordinate system as SVG) */}
+          {/* OVERLAY: placed blobs + pieces + characters (same coordinate system as SVG) */}
           <div style={{ position: "absolute", top: 0, left: 0, width: ISO_SVG_W, height: ISO_SVG_H, pointerEvents: "none" }}>
             {/* Ghost universe pieces — not interactive */}
             {showUniverse2 && (
@@ -1945,11 +1914,19 @@ const WorldMap = () => {
                 ))}
               </div>
             )}
+            {/* Blobs — rendered below pieces */}
+            {blobs.map(blob => (
+              <PlacedBlob key={blob.id} blob={blob}
+                isSelected={selectedBlob?.id === blob.id}
+                onClick={() => { setSelectedBlob(blob); setSelectedPieceId(null); setSelectedTile(null); }}
+                onDragStart={(b) => { setDraggingBlob(b); }}
+              />
+            ))}
             {/* Active universe pieces — interactive */}
             {activePieces.map(piece => (
               <PlacedPiece key={piece.instanceId} piece={piece} col={piece.col} row={piece.row}
                 isSelected={selectedPieceId === piece.instanceId}
-                onClick={() => setSelectedPieceId(id => id === piece.instanceId ? null : piece.instanceId)}
+                onClick={() => { setSelectedPieceId(id => id === piece.instanceId ? null : piece.instanceId); setSelectedBlob(null); setSelectedTile(null); }}
                 customName={pieceDetails[piece.instanceId]?.name || null}
               />
             ))}
@@ -1969,14 +1946,6 @@ const WorldMap = () => {
             })}
           </div>
         </div>
-
-        {/* SCREEN-SPACE OVERLAYS */}
-        {activeLayers.map(layer => <LayerMapOverlay key={layer.id} layer={layer} />)}
-        {mapMode === "pressure" && (
-          <PressureBlobsLayer blobs={blobs} selectedId={selectedBlob?.id}
-            onSelect={(b) => { setSelectedBlob(b); setSelectedStamp(null); }} />
-        )}
-        <PressureIconsSVG blobs={mapMode === "pressure" ? blobs : []} cursorPos={cursorPos} previewStamp={selectedStamp} />
 
         {/* Deep vignette */}
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 10, background: "radial-gradient(ellipse 70% 70% at 50% 50%, transparent 30%, rgba(3,8,16,0.75) 100%)" }}/>
@@ -2100,7 +2069,7 @@ const WorldMap = () => {
           {leftTab === "events" ? (
             <>
               {STAMP_CATEGORIES.map(cat => (
-                <StampSection key={cat.id} cat={cat} selectedId={selectedStamp?.id} onSelect={setSelectedStamp}/>
+                <StampSection key={cat.id} cat={cat} onDragStart={setDraggingStamp}/>
               ))}
               <div style={{ padding: "10px 14px 4px" }}>
                 <button style={{ width: "100%", padding: "10px 12px", background: "transparent", border: "1px dashed var(--iron)", borderRadius: 8, color: "var(--text-secondary)", fontSize: 11, fontFamily: "var(--font-ui)", letterSpacing: "0.04em", cursor: "pointer" }}
@@ -2126,15 +2095,31 @@ const WorldMap = () => {
         display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11,
       }}>{leftOpen ? "‹" : "›"}</button>
 
-      {/* LAYER PANEL */}
-      <LayerPanel layers={layers} onToggle={handleLayerToggle} mapMode={mapMode} onModeChange={setMapMode} open={layerPanelOpen} onToggleOpen={() => setLayerPanelOpen(o => !o)} />
-
       {/* ZOOM CONTROLS */}
       <ZoomControls zoom={zoom} onZoomIn={() => applyZoom(+0.1)} onZoomOut={() => applyZoom(-0.1)}
         onReset={() => { stateRef.current = { zoom: initZoom, pan: initPan }; setZoom(initZoom); setPan(initPan); }} />
 
+      {/* UNDO BUTTON */}
+      <button onClick={handleUndo} disabled={history.length === 0} style={{
+        position: "absolute", bottom: 140, right: 16, zIndex: 25,
+        width: 36, height: 36, borderRadius: 8,
+        background: "rgba(6,8,20,0.9)", border: "1px solid var(--iron)",
+        color: history.length ? "var(--text-secondary)" : "var(--text-dim)",
+        cursor: history.length ? "pointer" : "default",
+        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16,
+      }}>&#x21A9;</button>
+
+      {/* RANDOMIZE BUTTON */}
+      <button onClick={handleRandomize} style={{
+        position: "absolute", bottom: 184, right: 16, zIndex: 25,
+        width: 36, height: 36, borderRadius: 8,
+        background: "rgba(6,8,20,0.9)", border: "1px solid var(--iron)",
+        color: "var(--text-secondary)", cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16,
+      }} title="Randomize map">&#x2684;</button>
+
       {/* COMPASS */}
-      <div style={{ position: "absolute", top: 18, right: 288, width: 44, height: 44, background: "rgba(15,15,26,0.85)", backdropFilter: "blur(8px)", border: "1px solid var(--iron)", borderRadius: "50%", zIndex: 25, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ position: "absolute", top: 18, right: 18, width: 44, height: 44, background: "rgba(15,15,26,0.85)", backdropFilter: "blur(8px)", border: "1px solid var(--iron)", borderRadius: "50%", zIndex: 25, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ position: "relative", width: 26, height: 26 }}>
           <div style={{ position: "absolute", left: "50%", top: 2, transform: "translateX(-50%)", color: "var(--krypton)", fontSize: 9, fontWeight: 600 }}>N</div>
           <div style={{ position: "absolute", left: "50%", top: "50%", width: 1, height: 12, background: "linear-gradient(to bottom, var(--krypton), transparent)", transform: "translateX(-50%) translateY(-100%)" }}/>
@@ -2156,6 +2141,32 @@ const WorldMap = () => {
         />
       )}
 
+      {/* TILE DETAIL CARD */}
+      {selectedTile && !selectedBlob && !selectedPieceId && (
+        <TileDetailCard
+          tile={selectedTile}
+          leftOffset={leftOpen ? PANEL_W + 12 : 12}
+          onClose={() => setSelectedTile(null)}
+          onSetTerrain={(t) => {
+            pushHistory();
+            setTerrainOverrides(prev => ({ ...prev, [`${selectedTile.col},${selectedTile.row}`]: t }));
+            setSelectedTile(prev => ({ ...prev, terrain: t }));
+          }}
+          onReset={() => {
+            pushHistory();
+            setTerrainOverrides(prev => {
+              const next = { ...prev };
+              delete next[`${selectedTile.col},${selectedTile.row}`];
+              return next;
+            });
+            const defaultTerrain = activeUniverse === 1
+              ? (TERRAIN_MAP[selectedTile.row]?.[selectedTile.col] || "plains")
+              : (TERRAIN_MAP_2[selectedTile.row]?.[selectedTile.col] || "plains");
+            setSelectedTile(prev => ({ ...prev, terrain: defaultTerrain }));
+          }}
+        />
+      )}
+
       {/* PRESENCE STRIP */}
       <PresenceStrip chars={CHARACTERS_MAP} activeChar={activeChar} leftOpen={leftOpen}
         onSelect={(id) => {
@@ -2170,14 +2181,6 @@ const WorldMap = () => {
         {draggingPiece && <PieceThumb piece={draggingPiece} size={56} />}
       </div>
 
-      {/* STAMP PLACEMENT LABEL */}
-      {selectedStamp && (
-        <div style={{ position: "fixed", top: 18, left: "50%", transform: "translateX(-50%)", zIndex: 50, background: "rgba(15,15,26,0.92)", backdropFilter: "blur(8px)", border: `1px solid ${selectedStamp.categoryColor}`, borderRadius: 10, padding: "8px 14px", fontFamily: "var(--font-ui)", fontSize: 12, color: "var(--text-primary)", display: "inline-flex", alignItems: "center", gap: 8, boxShadow: `0 0 24px ${selectedStamp.categoryColor}40` }}>
-          <EventThumb id={selectedStamp.id} color={selectedStamp.categoryColor} size={28}/>
-          <span>Placing: <strong>{selectedStamp.label}</strong></span>
-          <span style={{ color: "var(--text-dim)", fontFamily: "var(--font-mono)", fontSize: 10 }}>· Click on map · ESC to cancel</span>
-        </div>
-      )}
     </div>
   );
 };
